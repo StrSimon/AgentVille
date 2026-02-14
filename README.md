@@ -1,5 +1,7 @@
 # AgentVille
 
+[![Tests](https://github.com/StrSimon/AgentVille/actions/workflows/test.yml/badge.svg)](https://github.com/StrSimon/AgentVille/actions/workflows/test.yml) ![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen) ![Node.js](https://img.shields.io/badge/node-%3E%3D18-blue)
+
 Watch your AI agents work as villagers in an isometric village. Like `htop`, but as a city-builder game.
 
 ## Quick Start
@@ -136,9 +138,29 @@ bin/
 public/sprites/               # Pixel art assets (buildings, dwarves, props)
 ```
 
+## Testing
+
+```bash
+npm test                # Run all 147 tests (server + client)
+npm run test:server     # Server tests only (Node.js native runner)
+npm run test:client     # Frontend tests only (Vitest)
+npm run test:coverage   # Full suite with server coverage report
+```
+
+**Server tests** use Node.js native test runner (`node:test`) — zero external deps. **Frontend tests** use Vitest + testing-library.
+
+| Layer | Module | Lines | Branches |
+|-------|--------|-------|----------|
+| Server | `agentStore.mjs` | 98% | 95% |
+| Server | `bridge.mjs` | 93% | 69% |
+| Server | `dwarfNames.mjs` | 100% | 100% |
+| Client | `simulator.ts`, `types.ts`, `dwarfNames.ts` | tested | — |
+| Client | `useKeyboard` hook | tested | — |
+| Client | `SessionStats`, `ThoughtBubble` | tested | — |
+
 ## Tech Stack
 
 - **Frontend:** React 19 + Tailwind CSS 3 + Framer Motion 11 + PixiJS 8
 - **Bridge:** Pure Node.js (zero dependencies)
 - **Protocol:** HTTP + SSE
-- **Tests:** `node --test server/bridge.test.mjs`
+- **Tests:** Node.js native runner (server) + Vitest (client)
