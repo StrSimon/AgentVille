@@ -345,6 +345,47 @@ describe('CORS', () => {
   });
 });
 
+// ── Busy lifecycle ──────────────────────────────────────
+
+describe('Heartbeat busy state', () => {
+  it('should track busy flag from PreToolUse', async () => {
+    await post('/api/heartbeat', {
+      agent: 'Lifecycle Agent',
+      activity: 'coding',
+      busy: true,
+    });
+
+    const { data } = await get('/api/status');
+    const agent = data.agents['lifecycle-agent'];
+    assert.ok(agent, 'lifecycle-agent should exist');
+    assert.equal(agent.busy, true);
+  });
+
+  it('should clear busy flag from PostToolUse', async () => {
+    await post('/api/heartbeat', {
+      agent: 'Lifecycle Agent',
+      inputBytes: 100,
+      outputBytes: 200,
+      busy: false,
+    });
+
+    const { data } = await get('/api/status');
+    const agent = data.agents['lifecycle-agent'];
+    assert.equal(agent.busy, false);
+  });
+
+  it('should default to busy=false when not provided', async () => {
+    await post('/api/heartbeat', {
+      agent: 'No Busy Flag',
+      activity: 'coding',
+    });
+
+    const { data } = await get('/api/status');
+    const agent = data.agents['no-busy-flag'];
+    assert.equal(agent.busy, false);
+  });
+});
+
 // ── 404 ──────────────────────────────────────────────────
 
 describe('Unknown routes', () => {

@@ -7,7 +7,7 @@ import {
 } from './agentStore.mjs';
 
 const PORT = process.env.AGENTVILLE_PORT || 4242;
-const DESPAWN_TIMEOUT = 120_000; // 2min no heartbeat = agent leaves
+const DESPAWN_TIMEOUT = 600_000; // 10min safety net (SessionEnd handles normal cleanup)
 
 const sseClients = new Set();
 const agents = new Map();
@@ -192,6 +192,7 @@ const server = http.createServer(async (req, res) => {
           activity,
           detail,
           project,
+          busy: !!data.busy,
           totalInputBytes: histInputBytes + inputBytes,
           totalOutputBytes: histOutputBytes + outputBytes,
           spawnedAt: Date.now(),
@@ -231,6 +232,7 @@ const server = http.createServer(async (req, res) => {
         if (!isPostToolUse) existing.activity = effectiveActivity;
         if (detail) existing.detail = detail;
         if (project) existing.project = project;
+        if (data.busy !== undefined) existing.busy = !!data.busy;
         existing.lastSeen = Date.now();
 
         // Track persistent stats
@@ -306,6 +308,7 @@ const server = http.createServer(async (req, res) => {
           name: event.agentName || event.agentId,
           activity: 'idle',
           detail: '',
+          busy: false,
           lastSeen: Date.now(),
           parentId: event.parentId || null,
         });
@@ -342,6 +345,7 @@ const server = http.createServer(async (req, res) => {
         detail: agent.detail,
         project: agent.project || '',
         parentId: agent.parentId,
+        busy: agent.busy || false,
         totalInputBytes: agent.totalInputBytes || 0,
         totalOutputBytes: agent.totalOutputBytes || 0,
         spawnedAt: agent.spawnedAt,
