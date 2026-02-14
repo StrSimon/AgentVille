@@ -7,3 +7,5 @@ assets/
 .env.*
 .DS_Store
 PLAN.md
+.claude/agent-roster
+.claude/agent-locks/
