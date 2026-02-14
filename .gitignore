@@ -8,4 +8,6 @@ assets/
 .DS_Store
 PLAN.md
 .claude/agent-roster
+.claude/agent-roster-sub
 .claude/agent-locks/
+.claude/agent-locks-sub/
