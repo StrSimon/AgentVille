@@ -19,9 +19,48 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // ""')
 
 # Derive agent name from project directory
 PROJECT=$(basename "$CWD" 2>/dev/null || echo "unknown")
-# Use short session suffix to distinguish parallel agents
-SHORT_ID="${SESSION:0:5}"
-AGENT_NAME="Agent-${SHORT_ID}"
+
+# ── Resident roster — persistent dwarf pool per project ─────
+# Each project has a roster of known dwarves (.claude/agent-roster).
+# When a session starts, it claims the first free dwarf in order.
+# If all are busy (parallel sessions), a new dwarf is created and
+# added to the roster. Lock files go stale after 3 min of inactivity,
+# so a returning session reclaims the same dwarf (typically #1).
+ROSTER_FILE="$CWD/.claude/agent-roster"
+LOCKS_DIR="$CWD/.claude/agent-locks"
+mkdir -p "$LOCKS_DIR" 2>/dev/null
+
+CLAIMED_ID=""
+
+# Walk the roster and claim the first available resident
+if [ -f "$ROSTER_FILE" ]; then
+  while IFS= read -r RESIDENT_ID; do
+    [ -z "$RESIDENT_ID" ] && continue
+    LOCK="$LOCKS_DIR/$RESIDENT_ID"
+    LOCK_SESSION=$(cat "$LOCK" 2>/dev/null | tr -d '\n')
+    if [ "$LOCK_SESSION" = "$SESSION" ]; then
+      # We already own this dwarf — refresh the lock
+      touch "$LOCK" 2>/dev/null
+      CLAIMED_ID="$RESIDENT_ID"
+      break
+    elif [ ! -f "$LOCK" ] || [ -n "$(find "$LOCK" -mmin +3 2>/dev/null)" ]; then
+      # Free or stale — claim it
+      echo "$SESSION" > "$LOCK" 2>/dev/null
+      CLAIMED_ID="$RESIDENT_ID"
+      break
+    fi
+    # This dwarf is busy — try the next one
+  done < "$ROSTER_FILE"
+fi
+
+# No free resident found — recruit a new dwarf
+if [ -z "$CLAIMED_ID" ]; then
+  CLAIMED_ID="${SESSION:0:5}"
+  echo "$CLAIMED_ID" >> "$ROSTER_FILE" 2>/dev/null || true
+  echo "$SESSION" > "$LOCKS_DIR/$CLAIMED_ID" 2>/dev/null || true
+fi
+
+AGENT_NAME="Agent-${CLAIMED_ID}"
 
 case "$EVENT" in
   PreToolUse)
