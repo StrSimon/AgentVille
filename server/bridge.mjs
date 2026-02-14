@@ -225,6 +225,14 @@ const server = http.createServer(async (req, res) => {
           targetBuilding: ACTIVITY_BUILDING[activity] || 'campfire',
         });
       } else {
+        // Sub-agent reusing a roster dwarf — count as new spawn for parent
+        if (data.newSpawn && parentId) {
+          recordSubAgentSpawn(parentId);
+          recordSession(agentId);
+          if (parentId !== existing.parentId) existing.parentId = parentId;
+          console.log(`  ⬆ ${existing.name} re-activated [child of ${parentId}]`);
+        }
+
         const isPostToolUse = !!(inputBytes || outputBytes) && activity === 'idle';
         const effectiveActivity = isPostToolUse ? existing.activity : activity;
         const activityChanged = existing.activity !== effectiveActivity;

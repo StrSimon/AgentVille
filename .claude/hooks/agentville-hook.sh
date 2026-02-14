@@ -30,6 +30,59 @@ ROSTER_FILE="$CWD/.claude/agent-roster"
 LOCKS_DIR="$CWD/.claude/agent-locks"
 mkdir -p "$LOCKS_DIR" 2>/dev/null
 
+# ── Sub-agent roster — same concept for sub-agents ──────────
+# Sub-agents get their own roster so they persist across invocations
+# and accumulate XP over time. Lock staleness is 10 min (matches
+# the bridge despawn timeout). Reverse-mapping files (_map_*) let
+# SubagentStop find which roster dwarf to release.
+SUB_ROSTER_FILE="$CWD/.claude/agent-roster-sub"
+SUB_LOCKS_DIR="$CWD/.claude/agent-locks-sub"
+mkdir -p "$SUB_LOCKS_DIR" 2>/dev/null
+
+claim_sub_dwarf() {
+  local CLAUDE_AGENT_ID="$1"
+  local CLAIMED=""
+
+  if [ -f "$SUB_ROSTER_FILE" ]; then
+    while IFS= read -r RESIDENT_ID; do
+      [ -z "$RESIDENT_ID" ] && continue
+      LOCK="$SUB_LOCKS_DIR/$RESIDENT_ID"
+      if [ ! -f "$LOCK" ] || [ -n "$(find "$LOCK" -mmin +10 2>/dev/null)" ]; then
+        # Free or stale — claim it
+        echo "$CLAUDE_AGENT_ID" > "$LOCK" 2>/dev/null
+        CLAIMED="$RESIDENT_ID"
+        break
+      fi
+    done < "$SUB_ROSTER_FILE"
+  fi
+
+  # No free resident — recruit new dwarf
+  if [ -z "$CLAIMED" ]; then
+    CLAIMED="${CLAUDE_AGENT_ID:0:5}"
+    echo "$CLAIMED" >> "$SUB_ROSTER_FILE" 2>/dev/null || true
+    echo "$CLAUDE_AGENT_ID" > "$SUB_LOCKS_DIR/$CLAIMED" 2>/dev/null || true
+  fi
+
+  # Reverse mapping: Claude agent_id → roster ID
+  echo "$CLAIMED" > "$SUB_LOCKS_DIR/_map_${CLAUDE_AGENT_ID:0:8}" 2>/dev/null || true
+
+  echo "$CLAIMED"
+}
+
+release_sub_dwarf() {
+  local CLAUDE_AGENT_ID="$1"
+  local MAP_FILE="$SUB_LOCKS_DIR/_map_${CLAUDE_AGENT_ID:0:8}"
+  local ROSTER_ID=""
+
+  if [ -f "$MAP_FILE" ]; then
+    ROSTER_ID=$(cat "$MAP_FILE" 2>/dev/null | tr -d '\n')
+    rm -f "$SUB_LOCKS_DIR/$ROSTER_ID" 2>/dev/null
+    rm -f "$MAP_FILE" 2>/dev/null
+  fi
+
+  echo "$ROSTER_ID"
+}
+
 CLAIMED_ID=""
 
 # Walk the roster and claim the first available resident
@@ -118,8 +171,10 @@ case "$EVENT" in
         DETAIL="${DETAIL:0:30}"
         ;;
       TodoWrite)
-        ACTIVITY="planning"
-        DETAIL="updating tasks"
+        # Skip — TodoWrite is internal bookkeeping, not a real activity.
+        # Sending a heartbeat here races with Edit/Read heartbeats and
+        # causes the agent to appear stuck on "planning".
+        exit 0
         ;;
       *)
         ACTIVITY="coding"
@@ -147,30 +202,32 @@ case "$EVENT" in
     ;;
 
   SubagentStart)
-    # Register sub-agent with parent relationship
+    # Register sub-agent via roster — reuses persistent dwarf identities
     SUBAGENT_ID=$(echo "$INPUT" | jq -r '.agent_id // ""')
     if [ -n "$SUBAGENT_ID" ]; then
-      SUB_SHORT="${SUBAGENT_ID:0:5}"
-      SUB_NAME="Agent-${SUB_SHORT}"
+      SUB_CLAIMED=$(claim_sub_dwarf "$SUBAGENT_ID")
+      SUB_NAME="Agent-${SUB_CLAIMED}"
       (curl -s -X POST "$BRIDGE/api/heartbeat" \
         -H "Content-Type: application/json" \
-        -d "{\"agent\":\"$SUB_NAME\",\"activity\":\"planning\",\"parentAgent\":\"$AGENT_NAME\",\"detail\":\"starting\",\"project\":\"$PROJECT\"}" \
+        -d "{\"agent\":\"$SUB_NAME\",\"activity\":\"planning\",\"parentAgent\":\"$AGENT_NAME\",\"detail\":\"starting\",\"project\":\"$PROJECT\",\"newSpawn\":true}" \
         --connect-timeout 1 2>/dev/null || true) &
     fi
     exit 0
     ;;
 
   SubagentStop)
-    # Sub-agent finished — despawn immediately
+    # Sub-agent finished — release roster lock, send idle (don't despawn)
+    # The dwarf goes to campfire and auto-despawns after 10 min of inactivity
     SUBAGENT_ID=$(echo "$INPUT" | jq -r '.agent_id // ""')
     if [ -n "$SUBAGENT_ID" ]; then
-      SUB_SHORT="${SUBAGENT_ID:0:5}"
-      SUB_NAME="Agent-${SUB_SHORT}"
-      SUB_ID=$(echo "$SUB_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
-      (curl -s -X POST "$BRIDGE/api/event" \
-        -H "Content-Type: application/json" \
-        -d "{\"type\":\"agent:despawn\",\"agentId\":\"$SUB_ID\"}" \
-        --connect-timeout 1 2>/dev/null || true) &
+      SUB_ROSTER_ID=$(release_sub_dwarf "$SUBAGENT_ID")
+      if [ -n "$SUB_ROSTER_ID" ]; then
+        SUB_NAME="Agent-${SUB_ROSTER_ID}"
+        (curl -s -X POST "$BRIDGE/api/heartbeat" \
+          -H "Content-Type: application/json" \
+          -d "{\"agent\":\"$SUB_NAME\",\"activity\":\"idle\",\"detail\":\"\",\"project\":\"$PROJECT\",\"busy\":false}" \
+          --connect-timeout 1 2>/dev/null || true) &
+      fi
     fi
     exit 0
     ;;
