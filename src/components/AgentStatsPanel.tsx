@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { getClanColor } from '../types'
 import type { AgentState, ActivityType } from '../types'
 
 export interface ActivityRecord {
@@ -134,14 +135,17 @@ export function AgentStatsPanel({ agent, activityHistory, onClose }: AgentStatsP
                 </div>
               )}
               <span className="text-white/40 text-[10px] mt-1">{agent.role}</span>
-              {agent.project && (
-                <span
-                  className="text-[9px] px-1.5 py-0.5 rounded-full"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
-                >
-                  {agent.project}
-                </span>
-              )}
+              {agent.clan && (() => {
+                const cc = getClanColor(agent.clan);
+                return (
+                  <span
+                    className="text-[9px] px-1.5 py-0.5 rounded-full"
+                    style={{ background: `${cc}20`, border: `1px solid ${cc}44`, color: cc }}
+                  >
+                    Clan {agent.clan}
+                  </span>
+                );
+              })()}
               {agent.isSubAgent && (
                 <span
                   className="text-[9px] px-1.5 py-0.5 rounded-full mt-0.5"

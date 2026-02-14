@@ -139,6 +139,7 @@ export default function App() {
             status: 'idle',
             detail: '',
             project: event.project,
+            clan: event.clan || event.project,
             parentId: event.parentId,
             isSubAgent,
             totalInputBytes: event.totalInputBytes || 0,

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { ThoughtBubble } from './ThoughtBubble'
+import { getClanColor } from '../types'
 import type { AgentState } from '../types'
 
 interface AgentAvatarProps {
@@ -195,20 +196,23 @@ export function AgentAvatar({ agent, targetPosition, centerX, centerY, parentPos
           }
         </div>
 
-        {/* Project badge */}
-        {!isSub && agent.project && (
-          <div
-            className="mt-0.5 px-1.5 py-px rounded-full whitespace-nowrap"
-            style={{
-              background: `${agent.color}15`,
-              border: `1px solid ${agent.color}22`,
-              fontSize: 7,
-              color: `${agent.color}88`,
-            }}
-          >
-            {agent.project}
-          </div>
-        )}
+        {/* Clan badge */}
+        {!isSub && agent.clan && (() => {
+          const cc = getClanColor(agent.clan);
+          return (
+            <div
+              className="mt-0.5 px-1.5 py-px rounded-full whitespace-nowrap"
+              style={{
+                background: `${cc}20`,
+                border: `1px solid ${cc}44`,
+                fontSize: 7,
+                color: cc,
+              }}
+            >
+              Clan {agent.clan}
+            </div>
+          );
+        })()}
       </motion.div>
     </>
   );

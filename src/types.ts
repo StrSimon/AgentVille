@@ -18,6 +18,7 @@ export interface AgentState {
   status: 'idle' | 'moving' | 'working';
   detail: string;
   project?: string;
+  clan?: string;
   parentId?: string;
   isSubAgent?: boolean;
   totalInputBytes: number;
@@ -68,6 +69,7 @@ export interface AgentEvent {
   targetAgent?: string;
   detail?: string;
   project?: string;
+  clan?: string;
   parentId?: string;
   totalInputBytes?: number;
   totalOutputBytes?: number;
@@ -77,4 +79,30 @@ export interface AgentEvent {
   nextLevelXP?: number | null;
   subAgentsSpawned?: number;
   recentActivity?: { activity: string; detail: string; timestamp: number }[];
+}
+
+// ── Clan colors ─────────────────────────────────────────
+// Distinct, earthy/fantasy palette for clan badges.
+// Deterministic: same clan name always gets the same color.
+const CLAN_COLORS = [
+  '#c2884d', // bronze
+  '#5b8a72', // forest
+  '#8b6cc1', // amethyst
+  '#c75d5d', // garnet
+  '#4a90b8', // steel blue
+  '#b8943a', // gold
+  '#6b8e5a', // moss
+  '#a85882', // rose quartz
+  '#5c7fa8', // slate
+  '#d49a5a', // copper
+  '#7a6e5d', // stone
+  '#9c6b4e', // clay
+];
+
+export function getClanColor(clan: string): string {
+  let hash = 0;
+  for (let i = 0; i < clan.length; i++) {
+    hash = ((hash << 5) - hash + clan.charCodeAt(i)) | 0;
+  }
+  return CLAN_COLORS[Math.abs(hash) % CLAN_COLORS.length];
 }
