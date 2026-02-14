@@ -186,10 +186,142 @@ describe('GET /events (SSE)', () => {
     await reading.catch(() => {}); // ignore abort error
 
     // Should have received spawn + work events
-    const spawnEvent = events.find(e => e.type === 'agent:spawn' && e.agentName === 'SSE Test Agent');
+    // agentName is the dwarf name, agentRole is the raw name
+    const spawnEvent = events.find(e => e.type === 'agent:spawn' && e.agentId === 'sse-test-agent');
     const workEvent = events.find(e => e.type === 'agent:work' && e.agentId === 'sse-test-agent');
     assert.ok(spawnEvent, 'Should receive spawn event via SSE');
     assert.ok(workEvent, 'Should receive work event via SSE');
+  });
+});
+
+// ── Leaderboard API ─────────────────────────────────────
+
+describe('GET /api/leaderboard', () => {
+  it('should return a leaderboard array', async () => {
+    const { status, data } = await get('/api/leaderboard');
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(data.leaderboard));
+  });
+
+  it('should include agents that have sent heartbeats', async () => {
+    // test-coder was created earlier in the test suite
+    const { data } = await get('/api/leaderboard');
+    const entry = data.leaderboard.find(e => e.agentId === 'test-coder');
+    assert.ok(entry, 'test-coder should be in leaderboard');
+    assert.equal(typeof entry.xp, 'number');
+    assert.equal(typeof entry.level, 'number');
+    assert.equal(typeof entry.title, 'string');
+    assert.equal(typeof entry.name, 'string');
+  });
+
+  it('should be sorted by XP descending', async () => {
+    const { data } = await get('/api/leaderboard');
+    for (let i = 1; i < data.leaderboard.length; i++) {
+      assert.ok(
+        data.leaderboard[i - 1].xp >= data.leaderboard[i].xp,
+        'Leaderboard should be sorted by XP descending',
+      );
+    }
+  });
+});
+
+// ── Heartbeat with bytes ────────────────────────────────
+
+describe('Heartbeat byte tracking', () => {
+  it('should track inputBytes and outputBytes', async () => {
+    await post('/api/heartbeat', {
+      agent: 'Byte Tracker',
+      activity: 'coding',
+      inputBytes: 5000,
+      outputBytes: 3000,
+    });
+
+    const { data } = await get('/api/status');
+    const agent = data.agents['byte-tracker'];
+    assert.ok(agent, 'byte-tracker should exist');
+    assert.ok(agent.totalInputBytes >= 5000);
+    assert.ok(agent.totalOutputBytes >= 3000);
+  });
+
+  it('should accumulate bytes on subsequent heartbeats', async () => {
+    await post('/api/heartbeat', {
+      agent: 'Byte Tracker',
+      activity: 'idle',
+      inputBytes: 2000,
+      outputBytes: 1000,
+    });
+
+    const { data } = await get('/api/status');
+    const agent = data.agents['byte-tracker'];
+    assert.ok(agent.totalInputBytes >= 7000);
+    assert.ok(agent.totalOutputBytes >= 4000);
+  });
+});
+
+// ── Heartbeat with parentAgent ──────────────────────────
+
+describe('Heartbeat sub-agent registration', () => {
+  it('should register parent-child relationship', async () => {
+    // Create parent first
+    await post('/api/heartbeat', { agent: 'Parent Agent', activity: 'planning' });
+    // Create child with parentAgent
+    await post('/api/heartbeat', {
+      agent: 'Child Agent',
+      activity: 'coding',
+      parentAgent: 'Parent Agent',
+    });
+
+    const { data } = await get('/api/status');
+    const child = data.agents['child-agent'];
+    assert.ok(child, 'child-agent should exist');
+    assert.equal(child.parentId, 'parent-agent');
+  });
+});
+
+// ── Heartbeat with project field ────────────────────────
+
+describe('Heartbeat project field', () => {
+  it('should track project on agent', async () => {
+    await post('/api/heartbeat', {
+      agent: 'Project Worker',
+      activity: 'coding',
+      project: 'agentville',
+    });
+
+    const { data } = await get('/api/status');
+    const agent = data.agents['project-worker'];
+    assert.ok(agent);
+    assert.equal(agent.project, 'agentville');
+  });
+});
+
+// ── Event API edge cases ────────────────────────────────
+
+describe('POST /api/event edge cases', () => {
+  it('should reject invalid JSON', async () => {
+    const res = await fetch(`${BASE}/api/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not valid json',
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it('should handle work event for nonexistent agent gracefully', async () => {
+    const { status } = await post('/api/event', {
+      type: 'agent:work',
+      agentId: 'ghost-agent',
+      activity: 'coding',
+    });
+    assert.equal(status, 200);
+  });
+
+  it('should handle despawn for nonexistent agent gracefully', async () => {
+    const { status } = await post('/api/event', {
+      type: 'agent:despawn',
+      agentId: 'ghost-agent-2',
+    });
+    assert.equal(status, 200);
   });
 });
 
@@ -201,6 +333,16 @@ describe('CORS', () => {
     assert.equal(res.status, 204);
     assert.equal(res.headers.get('access-control-allow-origin'), '*');
   });
+
+  it('should set CORS headers on regular responses', async () => {
+    const res = await fetch(`${BASE}/api/status`);
+    assert.equal(res.headers.get('access-control-allow-origin'), '*');
+  });
+
+  it('should handle OPTIONS on any path', async () => {
+    const res = await fetch(`${BASE}/api/event`, { method: 'OPTIONS' });
+    assert.equal(res.status, 204);
+  });
 });
 
 // ── 404 ──────────────────────────────────────────────────
@@ -208,6 +350,11 @@ describe('CORS', () => {
 describe('Unknown routes', () => {
   it('should return 404 for unknown paths', async () => {
     const res = await fetch(`${BASE}/unknown`);
+    assert.equal(res.status, 404);
+  });
+
+  it('should return 404 for wrong method on known path', async () => {
+    const res = await fetch(`${BASE}/api/heartbeat`, { method: 'GET' });
     assert.equal(res.status, 404);
   });
 });
