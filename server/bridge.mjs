@@ -168,6 +168,13 @@ const server = http.createServer(async (req, res) => {
         // Initialize/update persistent profile
         getProfile(agentId, dwarfName, parentId);
         recordSession(agentId);
+        // Count the first tool call (previously missed on spawn)
+        if (activity && activity !== 'idle') {
+          recordToolUse(agentId);
+        }
+        if (inputBytes || outputBytes) {
+          recordBytes(agentId, inputBytes, outputBytes);
+        }
         if (isSubAgent && parentId) {
           recordSubAgentSpawn(parentId);
         }
@@ -244,12 +251,14 @@ const server = http.createServer(async (req, res) => {
           recordToolUse(agentId);
         }
 
-        // Check for level up
+        // Broadcast XP update (every heartbeat, so dashboard stays current)
         const newEnriched = getEnrichedProfile(agentId);
-        if (newEnriched && newEnriched.level > prevLevel) {
-          console.log(`  🎉 ${existing.name} leveled up! Lv.${newEnriched.level} ${newEnriched.title}`);
+        if (newEnriched) {
+          if (newEnriched.level > prevLevel) {
+            console.log(`  🎉 ${existing.name} leveled up! Lv.${newEnriched.level} ${newEnriched.title}`);
+          }
           broadcast({
-            type: 'agent:levelup',
+            type: 'agent:xp',
             agentId,
             level: newEnriched.level,
             title: newEnriched.title,
