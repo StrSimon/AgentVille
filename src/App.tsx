@@ -262,17 +262,21 @@ export default function App() {
           break;
         }
 
+        case 'agent:xp':
         case 'agent:levelup': {
           const agent = next.get(event.agentId);
           if (agent) {
+            const leveledUp = event.level && event.level > agent.level;
             next.set(event.agentId, {
               ...agent,
               level: event.level || agent.level,
               title: event.title || agent.title,
-              xp: event.xp || agent.xp,
+              xp: event.xp ?? agent.xp,
               nextLevelXP: event.nextLevelXP ?? agent.nextLevelXP,
             });
-            setEventLog(l => [`🎉 ${agent.name} → Lv.${event.level} ${event.title}`, ...l].slice(0, 30));
+            if (leveledUp) {
+              setEventLog(l => [`🎉 ${agent.name} → Lv.${event.level} ${event.title}`, ...l].slice(0, 30));
+            }
           }
           break;
         }

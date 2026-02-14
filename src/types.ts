@@ -58,7 +58,8 @@ export interface AgentEvent {
     | 'agent:complete'
     | 'agent:despawn'
     | 'agent:tokens'
-    | 'agent:levelup';
+    | 'agent:levelup'
+    | 'agent:xp';
   agentId: string;
   agentName?: string;
   agentRole?: string;
