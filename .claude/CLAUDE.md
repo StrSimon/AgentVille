@@ -14,7 +14,8 @@ The hook fires on every tool use and maps tools to activities:
 
 Sub-agents are automatically registered when spawned via `SubagentStart` hooks.
 Finished sub-agents despawn immediately via `SubagentStop` hooks.
-Agents auto-despawn after 2 minutes of inactivity as a fallback.
+Agents despawn immediately when the session ends via `SessionEnd` hooks.
+Agents auto-despawn after 10 minutes of inactivity as a safety net (crash fallback).
 
 **Dashboard:** http://localhost:5173
 **Bridge API:** http://localhost:4242

@@ -141,7 +141,7 @@ case "$EVENT" in
     OUTPUT_BYTES=$(echo "$INPUT" | jq -r '.tool_output // ""' | wc -c | tr -d ' ')
     (curl -s -X POST "$BRIDGE/api/heartbeat" \
       -H "Content-Type: application/json" \
-      -d "{\"agent\":\"$AGENT_NAME\",\"inputBytes\":${INPUT_BYTES:-0},\"outputBytes\":${OUTPUT_BYTES:-0},\"project\":\"$PROJECT\"}" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"inputBytes\":${INPUT_BYTES:-0},\"outputBytes\":${OUTPUT_BYTES:-0},\"project\":\"$PROJECT\",\"busy\":false}" \
       --connect-timeout 1 2>/dev/null || true) &
     exit 0
     ;;
@@ -175,6 +175,18 @@ case "$EVENT" in
     exit 0
     ;;
 
+  SessionEnd)
+    # Session terminated — despawn immediately and release lock
+    # curl runs synchronously here (no &) to ensure it completes before process exits
+    AGENT_ID=$(echo "$AGENT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
+    curl -s -X POST "$BRIDGE/api/event" \
+      -H "Content-Type: application/json" \
+      -d "{\"type\":\"agent:despawn\",\"agentId\":\"$AGENT_ID\"}" \
+      --connect-timeout 2 --max-time 3 2>/dev/null || true
+    rm -f "$LOCKS_DIR/$CLAIMED_ID" 2>/dev/null
+    exit 0
+    ;;
+
   *)
     exit 0
     ;;
@@ -183,10 +195,10 @@ esac
 # Escape detail for JSON (replace quotes and backslashes)
 DETAIL=$(echo "$DETAIL" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n')
 
-# Send heartbeat (non-blocking)
+# Send heartbeat (non-blocking) — busy=true because tool is about to execute
 (curl -s -X POST "$BRIDGE/api/heartbeat" \
   -H "Content-Type: application/json" \
-  -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"$ACTIVITY\",\"detail\":\"$DETAIL\",\"project\":\"$PROJECT\"}" \
+  -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"$ACTIVITY\",\"detail\":\"$DETAIL\",\"project\":\"$PROJECT\",\"busy\":true}" \
   --connect-timeout 1 2>/dev/null || true) &
 
 exit 0
