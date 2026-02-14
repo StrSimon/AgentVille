@@ -83,10 +83,11 @@ function debouncedSave() {
  * Get or create a persistent agent profile.
  * Returns { name, toolCalls, totalBytes, sessions, firstSeen, lastSeen, xp, level }
  */
-export function getProfile(agentId, dwarfName, parentId) {
+export function getProfile(agentId, dwarfName, parentId, clan) {
   if (!store.agents[agentId]) {
     store.agents[agentId] = {
       name: dwarfName,
+      clan: clan || null,
       toolCalls: 0,
       totalInputBytes: 0,
       totalOutputBytes: 0,
@@ -98,9 +99,17 @@ export function getProfile(agentId, dwarfName, parentId) {
       recentActivity: [],
     };
     debouncedSave();
-  } else if (parentId && !store.agents[agentId].parentId) {
-    store.agents[agentId].parentId = parentId;
-    debouncedSave();
+  } else {
+    let changed = false;
+    if (parentId && !store.agents[agentId].parentId) {
+      store.agents[agentId].parentId = parentId;
+      changed = true;
+    }
+    if (clan && store.agents[agentId].clan !== clan) {
+      store.agents[agentId].clan = clan;
+      changed = true;
+    }
+    if (changed) debouncedSave();
   }
 
   const profile = store.agents[agentId];
@@ -192,6 +201,7 @@ export function getEnrichedProfile(agentId) {
 
   return {
     ...profile,
+    clan: profile.clan || null,
     totalInputBytes: (profile.totalInputBytes || 0) + (profile.totalBytes ? Math.ceil(profile.totalBytes / 2) : 0),
     totalOutputBytes: (profile.totalOutputBytes || 0) + (profile.totalBytes ? Math.floor(profile.totalBytes / 2) : 0),
     recentActivity: profile.recentActivity || [],
@@ -214,6 +224,7 @@ export function getAllProfiles() {
     return {
       agentId: id,
       name: profile.name,
+      clan: profile.clan || null,
       toolCalls: profile.toolCalls,
       totalInputBytes: (profile.totalInputBytes || 0) + (profile.totalBytes ? Math.ceil(profile.totalBytes / 2) : 0),
       totalOutputBytes: (profile.totalOutputBytes || 0) + (profile.totalBytes ? Math.floor(profile.totalBytes / 2) : 0),

@@ -109,6 +109,7 @@ const server = http.createServer(async (req, res) => {
       };
       if (agent.parentId) spawnEvent.parentId = agent.parentId;
       if (agent.project) spawnEvent.project = agent.project;
+      spawnEvent.clan = enriched?.clan || agent.project || null;
       res.write(`data: ${JSON.stringify(spawnEvent)}\n\n`);
 
       if (agent.activity && agent.activity !== 'idle') {
@@ -166,7 +167,7 @@ const server = http.createServer(async (req, res) => {
         const isSubAgent = !!parentId;
 
         // Initialize/update persistent profile
-        getProfile(agentId, dwarfName, parentId);
+        getProfile(agentId, dwarfName, parentId, project);
         recordSession(agentId);
         // Count the first tool call (previously missed on spawn)
         if (activity && activity !== 'idle') {
@@ -210,6 +211,7 @@ const server = http.createServer(async (req, res) => {
         };
         if (parentId) spawnEvent.parentId = parentId;
         if (project) spawnEvent.project = project;
+        spawnEvent.clan = enriched?.clan || project || null;
         broadcast(spawnEvent);
         if (activity && activity !== 'idle') {
           recordActivity(agentId, activity, detail);
