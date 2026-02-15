@@ -105,7 +105,7 @@ export function getProfile(agentId, dwarfName, parentId, clan) {
       store.agents[agentId].parentId = parentId;
       changed = true;
     }
-    if (clan && store.agents[agentId].clan !== clan) {
+    if (clan && !store.agents[agentId].clan) {
       store.agents[agentId].clan = clan;
       changed = true;
     }
