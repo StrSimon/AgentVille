@@ -24,6 +24,7 @@ export interface AgentState {
   previousActivity?: ActivityType;
   waiting?: boolean;
   failure?: string;
+  offline?: boolean;
   totalInputBytes: number;
   totalOutputBytes: number;
   subAgentsSpawned: number;
@@ -87,6 +88,7 @@ export interface AgentEvent {
   recentActivity?: { activity: string; detail: string; timestamp: number }[];
   waiting?: boolean;
   achievement?: string;
+  offline?: boolean;
 }
 
 // ── Clan colors ─────────────────────────────────────────

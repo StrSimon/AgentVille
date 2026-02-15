@@ -1,3 +1,4 @@
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Building } from './Building'
 import { AgentAvatar } from './AgentAvatar'
@@ -14,12 +15,40 @@ interface VillageProps {
   onAgentClick: (agentId: string) => void;
 }
 
+const MIN_SPREAD = 0.8;
+const MAX_SPREAD = 1.8;
+
 export function Village({ agents, buildings, trails, agentCount, activeAgentCount, onAgentClick }: VillageProps) {
   const centerX = 450;
   const centerY = 350;
 
+  const [spread, setSpread] = useState(1);
+  const villageRef = useRef<HTMLDivElement>(null);
+
+  // Native wheel listener with { passive: false } so preventDefault() actually works
+  useEffect(() => {
+    const el = villageRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      setSpread(s => Math.min(MAX_SPREAD, Math.max(MIN_SPREAD, s + e.deltaY * 0.001)));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
+
+  const resetView = useCallback(() => setSpread(1), []);
+
+  // Spread-adjusted buildings: positions scale with spread factor
+  const spreadBuildings = useMemo(() =>
+    buildings.map(b => ({
+      ...b,
+      position: { x: b.position.x * spread, y: b.position.y * spread },
+    })),
+  [buildings, spread]);
+
   const getBuildingPosition = (buildingId: string) => {
-    const building = buildings.find(b => b.id === buildingId);
+    const building = spreadBuildings.find(b => b.id === buildingId);
     return building?.position || { x: 0, y: 0 };
   };
 
@@ -37,15 +66,17 @@ export function Village({ agents, buildings, trails, agentCount, activeAgentCoun
       (agent.id.charCodeAt(Math.floor(agent.id.length / 2)) * 11 + agent.id.length * 7) % 30 - 15;
     return {
       x: centerX + targetPos.x + hash,
-      y: centerY + targetPos.y + 50 + Math.abs(hash2),
+      y: centerY + targetPos.y + hash2,
     };
   };
 
   const agentArray = Array.from(agents.values());
 
   return (
-    <div className="w-full h-full flex items-center justify-center">
-      <div className="relative" style={{ width: 900, height: 700 }}>
+    <div
+      className="w-full h-full flex items-center justify-center overflow-hidden"
+    >
+      <div ref={villageRef} className="relative" style={{ width: 900, height: 700 }}>
         {/* Day/Night atmospheric cycle */}
         <DayNightCycle agentCount={agentCount} activeAgentCount={activeAgentCount} />
 
@@ -68,7 +99,7 @@ export function Village({ agents, buildings, trails, agentCount, activeAgentCoun
           className="absolute inset-0 w-full h-full pointer-events-none"
           style={{ zIndex: 1 }}
         >
-          {buildings
+          {spreadBuildings
             .filter(b => b.id !== 'campfire')
             .map(building => (
               <line
@@ -85,10 +116,10 @@ export function Village({ agents, buildings, trails, agentCount, activeAgentCoun
         </svg>
 
         {/* Agent movement trails */}
-        <TrailLayer trails={trails} centerX={centerX} centerY={centerY} />
+        <TrailLayer trails={trails} centerX={centerX} centerY={centerY} spread={spread} />
 
         {/* Buildings - sorted by Y for depth */}
-        {[...buildings]
+        {[...spreadBuildings]
           .sort((a, b) => a.position.y - b.position.y)
           .map(building => (
             <Building
@@ -184,6 +215,22 @@ export function Village({ agents, buildings, trails, agentCount, activeAgentCoun
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Spread controls */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-1.5" style={{ zIndex: 30 }}>
+        <button
+          onClick={() => setSpread(s => Math.max(MIN_SPREAD, s - 0.15))}
+          className="w-7 h-7 rounded bg-black/50 text-white/50 hover:text-white/80 hover:bg-black/70 text-sm flex items-center justify-center transition-colors"
+        >+</button>
+        <button
+          onClick={resetView}
+          className="px-2 h-7 rounded bg-black/50 text-white/40 hover:text-white/80 hover:bg-black/70 text-[10px] font-mono flex items-center justify-center transition-colors"
+        >{Math.round(spread * 100)}%</button>
+        <button
+          onClick={() => setSpread(s => Math.min(MAX_SPREAD, s + 0.15))}
+          className="w-7 h-7 rounded bg-black/50 text-white/50 hover:text-white/80 hover:bg-black/70 text-sm flex items-center justify-center transition-colors"
+        >-</button>
       </div>
     </div>
   );

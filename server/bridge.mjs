@@ -146,6 +146,29 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // Send stored-but-offline main agents as idle residents
+    const allProfiles = getAllProfiles();
+    for (const profile of allProfiles) {
+      if (agents.has(profile.agentId)) continue; // already sent as active
+      if (profile.parentId) continue;             // skip sub-agents
+      res.write(`data: ${JSON.stringify({
+        type: 'agent:spawn',
+        agentId: profile.agentId,
+        agentName: profile.name,
+        agentRole: '',
+        level: profile.level || 1,
+        title: profile.title || 'Apprentice',
+        xp: profile.xp || 0,
+        nextLevelXP: profile.nextLevelXP,
+        totalInputBytes: profile.totalInputBytes || 0,
+        totalOutputBytes: profile.totalOutputBytes || 0,
+        subAgentsSpawned: profile.subAgentsSpawned || 0,
+        recentActivity: [],
+        clan: profile.clan || null,
+        offline: true,
+      })}\n\n`);
+    }
+
     sseClients.add(res);
     req.on('close', () => sseClients.delete(res));
     return;

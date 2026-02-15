@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Village } from './components/Village'
-import { PixiVillage } from './pixi/PixiVillage'
 import { ActivityTimeline, type TimelineEntry } from './components/ActivityTimeline'
 import { AgentStatsPanel, type ActivityRecord } from './components/AgentStatsPanel'
 import { createSimulator } from './simulator'
@@ -93,7 +92,6 @@ export default function App() {
     message: string;
     timestamp: number;
   }>>([]);
-  const [viewMode, setViewMode] = useState<'classic' | 'pixel'>('classic');
   const agentsRef = useRef(agents);
   agentsRef.current = agents;
 
@@ -107,7 +105,6 @@ export default function App() {
     toggleSound: sound.toggle,
     toggleTimeline: () => setTimelineVisible(v => !v),
     toggleMode: () => switchModeRef.current(),
-    toggleView: () => setViewMode(v => v === 'classic' ? 'pixel' : 'classic'),
   }), [sound.toggle]));
 
   // Clean up expired trails
@@ -142,7 +139,30 @@ export default function App() {
 
       switch (event.type) {
         case 'agent:spawn': {
-          if (next.has(event.agentId)) break;
+          const existing = next.get(event.agentId);
+          if (existing && !existing.offline) break; // truly duplicate spawn, skip
+
+          // Offline resident waking up — update in place
+          if (existing?.offline && !event.offline) {
+            next.set(event.agentId, {
+              ...existing,
+              role: event.agentRole || existing.role,
+              project: event.project || existing.project,
+              clan: event.clan || event.project || existing.clan,
+              parentId: event.parentId,
+              isSubAgent: !!event.parentId,
+              totalInputBytes: event.totalInputBytes || existing.totalInputBytes,
+              totalOutputBytes: event.totalOutputBytes || existing.totalOutputBytes,
+              subAgentsSpawned: event.subAgentsSpawned || existing.subAgentsSpawned,
+              level: event.level || existing.level,
+              title: event.title || existing.title,
+              xp: event.xp || existing.xp,
+              nextLevelXP: event.nextLevelXP ?? existing.nextLevelXP,
+              offline: false,
+            });
+            break;
+          }
+
           const isSubAgent = !!event.parentId;
           const color = AGENT_COLORS[colorIndex % AGENT_COLORS.length];
           colorIndex++;
@@ -162,6 +182,7 @@ export default function App() {
             clan: event.clan || event.project,
             parentId: event.parentId,
             isSubAgent,
+            offline: event.offline,
             totalInputBytes: event.totalInputBytes || 0,
             totalOutputBytes: event.totalOutputBytes || 0,
             subAgentsSpawned: event.subAgentsSpawned || 0,
@@ -184,9 +205,11 @@ export default function App() {
               return hist;
             });
           }
-          const label = isSubAgent ? '⛏' : '⬆';
-          setEventLog(l => [`${label} ${event.agentName || event.agentId} spawned`, ...l].slice(0, 30));
-          sound.playSpawn();
+          if (!event.offline) {
+            const label = isSubAgent ? '⛏' : '⬆';
+            setEventLog(l => [`${label} ${event.agentName || event.agentId} spawned`, ...l].slice(0, 30));
+            sound.playSpawn();
+          }
           break;
         }
 
@@ -364,11 +387,27 @@ export default function App() {
         case 'agent:despawn': {
           const agent = next.get(event.agentId);
           if (agent) {
-            const label = agent.isSubAgent ? '⛏' : '⬇';
-            setEventLog(l => [`${label} ${agent.name} left`, ...l].slice(0, 30));
-            sound.playDespawn();
+            if (agent.isSubAgent) {
+              // Sub-agents disappear completely
+              setEventLog(l => [`⛏ ${agent.name} left`, ...l].slice(0, 30));
+              sound.playDespawn();
+              next.delete(event.agentId);
+            } else {
+              // Main agents return to campfire as idle residents
+              setEventLog(l => [`🔥 ${agent.name} rests by the fire`, ...l].slice(0, 30));
+              next.set(event.agentId, {
+                ...agent,
+                activity: 'idle',
+                previousActivity: agent.activity,
+                status: 'idle',
+                targetBuilding: 'campfire',
+                previousBuilding: agent.targetBuilding,
+                detail: '',
+                waiting: false,
+                offline: true,
+              });
+            }
           }
-          next.delete(event.agentId);
           setSelectedAgentId(prev => prev === event.agentId ? null : prev);
           break;
         }
@@ -515,17 +554,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* View toggle */}
-        <button
-          onClick={() => setViewMode(v => v === 'classic' ? 'pixel' : 'classic')}
-          className={`text-[10px] transition-colors ${
-            viewMode === 'pixel' ? 'text-amber-400/60' : 'text-white/30 hover:text-white/50'
-          }`}
-          title="Toggle pixel view (V)"
-        >
-          {viewMode === 'pixel' ? '🏘️' : '🗺️'}
-        </button>
-
         {/* Directory button */}
         <button
           onClick={() => setDirectoryOpen(true)}
@@ -562,31 +590,20 @@ export default function App() {
           </div>
         ) : (
           <div className="text-[9px] text-white/15 space-y-0.5">
-            <div><span className="text-white/25 font-mono">D</span> mode <span className="text-white/25 font-mono">T</span> timeline <span className="text-white/25 font-mono">M</span> sound <span className="text-white/25 font-mono">V</span> view</div>
+            <div><span className="text-white/25 font-mono">D</span> mode <span className="text-white/25 font-mono">T</span> timeline <span className="text-white/25 font-mono">M</span> sound</div>
           </div>
         )}
       </div>
 
       {/* Village */}
-      {viewMode === 'classic' ? (
-        <Village
-          agents={agents}
-          buildings={buildings}
-          trails={trails}
-          agentCount={agents.size}
-          activeAgentCount={activeAgentCount}
-          onAgentClick={setSelectedAgentId}
-        />
-      ) : (
-        <PixiVillage
-          agents={agents}
-          buildings={buildings}
-          trails={trails}
-          agentCount={agents.size}
-          activeAgentCount={activeAgentCount}
-          onAgentClick={setSelectedAgentId}
-        />
-      )}
+      <Village
+        agents={agents}
+        buildings={buildings}
+        trails={trails}
+        agentCount={agents.size}
+        activeAgentCount={activeAgentCount}
+        onAgentClick={setSelectedAgentId}
+      />
 
       {/* Achievement Banners */}
       <AchievementBanner achievements={achievements} />

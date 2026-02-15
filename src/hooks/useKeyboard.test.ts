@@ -12,7 +12,6 @@ describe('useKeyboard', () => {
       toggleSound: vi.fn(),
       toggleTimeline: vi.fn(),
       toggleMode: vi.fn(),
-      toggleView: vi.fn(),
     };
     renderHook(() => useKeyboard(actions));
 
@@ -25,7 +24,6 @@ describe('useKeyboard', () => {
       toggleSound: vi.fn(),
       toggleTimeline: vi.fn(),
       toggleMode: vi.fn(),
-      toggleView: vi.fn(),
     };
     renderHook(() => useKeyboard(actions));
 
@@ -38,7 +36,6 @@ describe('useKeyboard', () => {
       toggleSound: vi.fn(),
       toggleTimeline: vi.fn(),
       toggleMode: vi.fn(),
-      toggleView: vi.fn(),
     };
     renderHook(() => useKeyboard(actions));
 
@@ -51,7 +48,6 @@ describe('useKeyboard', () => {
       toggleSound: vi.fn(),
       toggleTimeline: vi.fn(),
       toggleMode: vi.fn(),
-      toggleView: vi.fn(),
     };
     renderHook(() => useKeyboard(actions));
 
@@ -59,25 +55,11 @@ describe('useKeyboard', () => {
     expect(actions.toggleMode).toHaveBeenCalledOnce();
   });
 
-  it('should call toggleView on "v" key', () => {
-    const actions = {
-      toggleSound: vi.fn(),
-      toggleTimeline: vi.fn(),
-      toggleMode: vi.fn(),
-      toggleView: vi.fn(),
-    };
-    renderHook(() => useKeyboard(actions));
-
-    fireKey('v');
-    expect(actions.toggleView).toHaveBeenCalledOnce();
-  });
-
   it('should not trigger on unrelated keys', () => {
     const actions = {
       toggleSound: vi.fn(),
       toggleTimeline: vi.fn(),
       toggleMode: vi.fn(),
-      toggleView: vi.fn(),
     };
     renderHook(() => useKeyboard(actions));
 
@@ -88,7 +70,6 @@ describe('useKeyboard', () => {
     expect(actions.toggleSound).not.toHaveBeenCalled();
     expect(actions.toggleTimeline).not.toHaveBeenCalled();
     expect(actions.toggleMode).not.toHaveBeenCalled();
-    expect(actions.toggleView).not.toHaveBeenCalled();
   });
 
   it('should clean up event listener on unmount', () => {
@@ -96,7 +77,6 @@ describe('useKeyboard', () => {
       toggleSound: vi.fn(),
       toggleTimeline: vi.fn(),
       toggleMode: vi.fn(),
-      toggleView: vi.fn(),
     };
     const { unmount } = renderHook(() => useKeyboard(actions));
 

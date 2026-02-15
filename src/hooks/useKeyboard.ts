@@ -4,7 +4,6 @@ interface KeyboardActions {
   toggleSound: () => void;
   toggleTimeline: () => void;
   toggleMode: () => void;
-  toggleView: () => void;
 }
 
 export function useKeyboard(actions: KeyboardActions): void {
@@ -25,10 +24,6 @@ export function useKeyboard(actions: KeyboardActions): void {
         case "d":
         case "D":
           actions.toggleMode();
-          break;
-        case "v":
-        case "V":
-          actions.toggleView();
           break;
       }
     };
