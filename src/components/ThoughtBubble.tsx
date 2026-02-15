@@ -14,6 +14,8 @@ interface ThoughtBubbleProps {
   isIdleAtCampfire?: boolean;
   /** Previous activity (for victory detection after testing) */
   previousActivity?: ActivityType | null;
+  /** Transient failure message */
+  failure?: string;
 }
 
 const ACTIVITY_ICON: Record<string, string> = {
@@ -105,6 +107,14 @@ const VICTORY_PHRASES = [
   'Battle won!',
 ];
 
+const DWARF_FAILURE = [
+  'My hammer broke!',
+  'Blast! It crumbled!',
+  'The anvil cracked!',
+  'Ack! Failed!',
+  'That didn\u2019t work!',
+];
+
 /** Deterministic pick based on string hash */
 function pick<T>(arr: T[], seed: string): T {
   const h = seed.split('').reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
@@ -153,7 +163,7 @@ function dwarfSpeak(activity: ActivityType, detail: string): string {
   }
 }
 
-export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting = false, isIdleAtCampfire = false, previousActivity = null }: ThoughtBubbleProps) {
+export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting = false, isIdleAtCampfire = false, previousActivity = null, failure }: ThoughtBubbleProps) {
   const [visible, setVisible] = useState(false);
   const [currentDetail, setCurrentDetail] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -213,13 +223,17 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting 
   const isStoryMode = isIdleAtCampfire && !waiting && storyText;
   const isVictoryMode = showVictory;
   const isWaiting = waiting;
+  const isFailureMode = !!failure;
 
-  const icon = isVictoryMode ? '⚔️'
+  const icon = isFailureMode ? '💥'
+    : isVictoryMode ? '⚔️'
     : isStoryMode ? '🔥'
     : isWaiting ? '⏳'
     : (ACTIVITY_ICON[activity] || '');
 
-  const dwarf = isVictoryMode
+  const dwarf = isFailureMode
+    ? pick(DWARF_FAILURE, failure || 'fail')
+    : isVictoryMode
     ? pick(VICTORY_PHRASES, currentDetail || 'victory')
     : isStoryMode
     ? storyText!
@@ -235,7 +249,7 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting 
 
   return (
     <AnimatePresence>
-      {(visible && (isWaiting || currentDetail) || isStoryMode || isVictoryMode) && (
+      {(visible && (isWaiting || currentDetail) || isStoryMode || isVictoryMode || isFailureMode) && (
         <motion.div
           key={isWaiting ? 'waiting' : currentDetail}
           className="absolute flex flex-col items-center pointer-events-none"
@@ -253,8 +267,8 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting 
           <motion.div
             className="relative px-1.5 py-0.5 rounded whitespace-nowrap"
             style={{
-              background: isWaiting ? 'rgba(30,10,0,0.92)' : 'rgba(0,0,0,0.85)',
-              border: `1px solid ${isWaiting ? '#f59e0b88' : `${color}33`}`,
+              background: isFailureMode ? 'rgba(30,0,0,0.92)' : isWaiting ? 'rgba(30,10,0,0.92)' : 'rgba(0,0,0,0.85)',
+              border: `1px solid ${isFailureMode ? '#ef444488' : isWaiting ? '#f59e0b88' : `${color}33`}`,
               maxWidth: 220,
             }}
             animate={isWaiting ? {
@@ -266,7 +280,7 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting 
               ease: 'easeInOut',
             } : {}}
           >
-            <span className="text-[7px] leading-tight" style={{ color: isWaiting ? '#fbbf24' : `${color}bb` }}>
+            <span className="text-[7px] leading-tight" style={{ color: isFailureMode ? '#f87171' : isWaiting ? '#fbbf24' : `${color}bb` }}>
               {icon && <span className="mr-0.5">{icon}</span>}
               <span>{text}</span>
             </span>
@@ -278,7 +292,7 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting 
               height: 0,
               borderLeft: '3px solid transparent',
               borderRight: '3px solid transparent',
-              borderTop: `3px solid ${isWaiting ? 'rgba(30,10,0,0.92)' : 'rgba(0,0,0,0.85)'}`,
+              borderTop: `3px solid ${isFailureMode ? 'rgba(30,0,0,0.92)' : isWaiting ? 'rgba(30,10,0,0.92)' : 'rgba(0,0,0,0.85)'}`,
             }}
           />
         </motion.div>

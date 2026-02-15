@@ -66,25 +66,7 @@ setInterval(() => {
   }
 }, 5000);
 
-// ── Soft-idle: move agents to campfire when no heartbeats arrive ───
-// 2 min threshold — Claude often thinks 30-60s between tool calls,
-// so a short timeout causes false idle bounces.
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, agent] of agents) {
-    if (agent.activity !== 'idle' && !agent.busy && now - agent.lastSeen > 120_000) {
-      agent.activity = 'idle';
-      console.log(`  💤 ${agent.name} went idle (no activity)`);
-      broadcast({
-        type: 'agent:work',
-        agentId: id,
-        activity: 'idle',
-        detail: '',
-        targetBuilding: 'campfire',
-      });
-    }
-  }
-}, 10_000);
+// Soft-idle timer removed — the Stop hook now handles this instantly.
 
 // ── Server ───────────────────────────────────────────────
 
@@ -397,6 +379,12 @@ const server = http.createServer(async (req, res) => {
           agent.activity = event.activity || agent.activity;
           if (event.detail) agent.detail = event.detail;
           agent.lastSeen = Date.now();
+        }
+      } else if (event.type === 'agent:failure') {
+        const agent = agents.get(event.agentId);
+        if (agent) {
+          agent.lastSeen = Date.now();
+          console.log(`  💥 ${agent.name} failed: ${event.detail || 'unknown'}`);
         }
       }
 

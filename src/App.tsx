@@ -119,29 +119,8 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Waiting detection — if no events arrive for an agent for 15s,
-  // assume they're waiting for user input (permission prompts, etc.)
-  const lastEventTime = useRef<Map<string, number>>(new Map());
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setAgents(prev => {
-        let changed = false;
-        const next = new Map(prev);
-        for (const [id, agent] of next) {
-          if (agent.isSubAgent) continue;
-          const lastSeen = lastEventTime.current.get(id) || agent.spawnedAt;
-          const silent = now - lastSeen > 15_000;
-          if (silent && !agent.waiting) {
-            changed = true;
-            next.set(id, { ...agent, waiting: true });
-          }
-        }
-        return changed ? next : prev;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  // Waiting detection removed — PermissionRequest hook now sends instant waiting state.
+  // No more 15s timeout guessing.
 
   // Auto-cleanup expired achievements
   useEffect(() => {
@@ -160,9 +139,6 @@ export default function App() {
   const handleEvent = useCallback((event: AgentEvent) => {
     setAgents(prev => {
       const next = new Map(prev);
-
-      // Track last event time for waiting detection
-      lastEventTime.current.set(event.agentId, Date.now());
 
       switch (event.type) {
         case 'agent:spawn': {
@@ -360,6 +336,30 @@ export default function App() {
           break;
         }
 
+        case 'agent:failure': {
+          const agent = next.get(event.agentId);
+          if (agent) {
+            next.set(event.agentId, {
+              ...agent,
+              failure: event.detail || 'Something went wrong',
+            });
+            setEventLog(l => [`💥 ${agent.name}: ${event.detail || 'tool failed'}`, ...l].slice(0, 30));
+            // Auto-clear failure after 4s
+            setTimeout(() => {
+              setAgents(prev => {
+                const a = prev.get(event.agentId);
+                if (a?.failure) {
+                  const updated = new Map(prev);
+                  updated.set(event.agentId, { ...a, failure: undefined });
+                  return updated;
+                }
+                return prev;
+              });
+            }, 4000);
+          }
+          break;
+        }
+
         case 'agent:complete':
         case 'agent:despawn': {
           const agent = next.get(event.agentId);
@@ -369,7 +369,6 @@ export default function App() {
             sound.playDespawn();
           }
           next.delete(event.agentId);
-          lastEventTime.current.delete(event.agentId);
           setSelectedAgentId(prev => prev === event.agentId ? null : prev);
           break;
         }
