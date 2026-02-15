@@ -23,36 +23,49 @@ const DEFAULT_BUILDINGS: BuildingState[] = [
     position: { x: 0, y: 20 },
     color: '#78350f', glowColor: '#fb923c', icon: '🔥',
     activeAgents: [],
+    level: 1, title: 'Campsite', xp: 0, nextLevelXP: 100,
   },
   {
     id: 'guild', name: 'Architect Guild', type: 'planning',
     position: { x: -200, y: -120 },
     color: '#1e3a5f', glowColor: '#3b82f6', icon: '📐',
     activeAgents: [],
+    level: 1, title: 'Outpost', xp: 0, nextLevelXP: 100,
   },
   {
     id: 'forge', name: 'The Forge', type: 'coding',
     position: { x: 200, y: -80 },
     color: '#7c2d12', glowColor: '#f97316', icon: '⚒️',
     activeAgents: [],
+    level: 1, title: 'Outpost', xp: 0, nextLevelXP: 100,
   },
   {
     id: 'arena', name: 'The Arena', type: 'testing',
     position: { x: 0, y: -220 },
     color: '#14532d', glowColor: '#22c55e', icon: '⚔️',
     activeAgents: [],
+    level: 1, title: 'Outpost', xp: 0, nextLevelXP: 100,
   },
   {
     id: 'library', name: 'The Library', type: 'researching',
     position: { x: -200, y: 130 },
     color: '#3b0764', glowColor: '#a855f7', icon: '📚',
     activeAgents: [],
+    level: 1, title: 'Outpost', xp: 0, nextLevelXP: 100,
   },
   {
     id: 'tower', name: 'Watchtower', type: 'reviewing',
     position: { x: 200, y: 160 },
     color: '#713f12', glowColor: '#eab308', icon: '🔭',
     activeAgents: [],
+    level: 1, title: 'Outpost', xp: 0, nextLevelXP: 100,
+  },
+  {
+    id: 'tavern', name: 'The Tavern', type: 'idle',
+    position: { x: 100, y: 80 },
+    color: '#5c3a1e', glowColor: '#d4a558', icon: '🍺',
+    activeAgents: [],
+    level: 1, title: 'Campsite', xp: 0, nextLevelXP: 100,
   },
 ];
 
@@ -116,8 +129,33 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Waiting detection removed — PermissionRequest hook now sends instant waiting state.
-  // No more 15s timeout guessing.
+  // Idle wandering: offline main agents randomly wander between campfire and tavern
+  useEffect(() => {
+    const getPos = (id: string) => DEFAULT_BUILDINGS.find(b => b.id === id)?.position || { x: 0, y: 20 };
+    const interval = setInterval(() => {
+      setAgents(prev => {
+        const next = new Map(prev);
+        let changed = false;
+        for (const [id, agent] of next) {
+          if (!agent.offline || agent.isSubAgent) continue;
+          if (agent.targetBuilding !== 'campfire' && agent.targetBuilding !== 'tavern') continue;
+          if (Math.random() > 0.08) continue; // ~8% chance per tick
+          const dest = agent.targetBuilding === 'campfire' ? 'tavern' : 'campfire';
+          setTrails(t => [...t, {
+            id: `wander-${trailCounter++}`,
+            fromPos: getPos(agent.targetBuilding!),
+            toPos: getPos(dest),
+            color: agent.color + '66',
+            createdAt: Date.now(),
+          }]);
+          next.set(id, { ...agent, previousBuilding: agent.targetBuilding, targetBuilding: dest });
+          changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-cleanup expired achievements
   useEffect(() => {
@@ -383,30 +421,33 @@ export default function App() {
           break;
         }
 
+        case 'building:xp':
+        case 'building:state':
+          // Handled outside setAgents below
+          break;
+
         case 'agent:complete':
         case 'agent:despawn': {
           const agent = next.get(event.agentId);
           if (agent) {
             if (agent.isSubAgent) {
-              // Sub-agents disappear completely
               setEventLog(l => [`⛏ ${agent.name} left`, ...l].slice(0, 30));
               sound.playDespawn();
-              next.delete(event.agentId);
             } else {
-              // Main agents return to campfire as idle residents
               setEventLog(l => [`🔥 ${agent.name} rests by the fire`, ...l].slice(0, 30));
-              next.set(event.agentId, {
-                ...agent,
-                activity: 'idle',
-                previousActivity: agent.activity,
-                status: 'idle',
-                targetBuilding: 'campfire',
-                previousBuilding: agent.targetBuilding,
-                detail: '',
-                waiting: false,
-                offline: true,
-              });
             }
+            // Both main agents and sub-agents become offline residents
+            next.set(event.agentId, {
+              ...agent,
+              activity: 'idle',
+              previousActivity: agent.activity,
+              status: 'idle',
+              targetBuilding: 'campfire',
+              previousBuilding: agent.targetBuilding,
+              detail: '',
+              waiting: false,
+              offline: true,
+            });
           }
           setSelectedAgentId(prev => prev === event.agentId ? null : prev);
           break;
@@ -415,6 +456,36 @@ export default function App() {
 
       return next;
     });
+
+    // Handle building events (outside setAgents since they affect buildings state)
+    if (event.type === 'building:xp' || event.type === 'building:state') {
+      if (event.buildingId) {
+        setBuildings(prev => {
+          const prevBuilding = prev.find(b => b.id === event.buildingId);
+          // Detect level-up before updating
+          if (event.type === 'building:xp' && event.level && prevBuilding && event.level > prevBuilding.level) {
+            setEventLog(l => [
+              `🏰 ${prevBuilding.name} → Lv.${event.level} ${event.title}`,
+              ...l,
+            ].slice(0, 30));
+            sound.playAchievement();
+          }
+          return prev.map(b =>
+            b.id === event.buildingId
+              ? {
+                  ...b,
+                  level: event.level ?? b.level,
+                  title: event.title ?? b.title,
+                  xp: event.xp ?? b.xp,
+                  nextLevelXP: event.nextLevelXP ?? b.nextLevelXP,
+                  toolCalls: event.toolCalls ?? b.toolCalls,
+                  uniqueVisitors: event.uniqueVisitors ?? b.uniqueVisitors,
+                }
+              : b,
+          );
+        });
+      }
+    }
   }, [getBuildingPosition, sound]);
 
   // Bridge connection (live mode)
@@ -457,11 +528,15 @@ export default function App() {
 
   const isLive = mode === 'live';
 
-  // Compute active agent count for day/night cycle
-  const activeAgentCount = useMemo(
-    () => Array.from(agents.values()).filter(a => a.status === 'working').length,
-    [agents],
-  );
+  // Compute agent counts for header and day/night cycle
+  const { activeAgentCount, residentCount, subAgentCount } = useMemo(() => {
+    let active = 0, residents = 0, subs = 0;
+    for (const a of agents.values()) {
+      if (a.status === 'working') active++;
+      if (a.isSubAgent) subs++; else residents++;
+    }
+    return { activeAgentCount: active, residentCount: residents, subAgentCount: subs };
+  }, [agents]);
 
   // Compute total bytes across all agents
   const { totalInputBytes, totalOutputBytes } = useMemo(() => {
@@ -485,7 +560,7 @@ export default function App() {
           AgentVille
         </h1>
         <p className="text-[11px] text-white/30 mt-0.5">
-          {agents.size} active agent{agents.size !== 1 ? 's' : ''}
+          {activeAgentCount} working · {residentCount} resident{residentCount !== 1 ? 's' : ''}{subAgentCount > 0 ? ` · ${subAgentCount} child${subAgentCount !== 1 ? 'ren' : ''}` : ''}
         </p>
       </div>
 

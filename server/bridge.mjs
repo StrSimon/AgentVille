@@ -5,6 +5,12 @@ import {
   recordSession, getEnrichedProfile, getAllProfiles, recordActivity,
   recordSubAgentSpawn,
 } from './agentStore.mjs';
+import {
+  recordActivity as recordBuildingActivity,
+  recordVisit as recordBuildingVisit,
+  getEnrichedProfile as getEnrichedBuilding,
+  getAllProfiles as getAllBuildingProfiles,
+} from './buildingStore.mjs';
 
 const PORT = process.env.AGENTVILLE_PORT || 4242;
 const DESPAWN_TIMEOUT = 600_000; // 10min safety net (SessionEnd handles normal cleanup)
@@ -51,6 +57,30 @@ const ACTIVITY_BUILDING = {
   reviewing: 'tower',
   idle: 'campfire',
 };
+
+// ── Building XP helper ───────────────────────────────────
+// Track previous building levels so we can detect level-ups.
+const buildingPrevLevels = new Map();
+
+function updateBuildingXP(buildingId) {
+  const bp = getEnrichedBuilding(buildingId);
+  if (!bp) return;
+  const prevLevel = buildingPrevLevels.get(buildingId) || 1;
+  buildingPrevLevels.set(buildingId, bp.level);
+  if (bp.level > prevLevel) {
+    console.log(`  🏰 ${buildingId} leveled up! Lv.${bp.level} ${bp.title}`);
+  }
+  broadcast({
+    type: 'building:xp',
+    buildingId,
+    level: bp.level,
+    title: bp.title,
+    xp: bp.xp,
+    nextLevelXP: bp.nextLevelXP,
+    toolCalls: bp.toolCalls,
+    uniqueVisitors: bp.uniqueVisitors,
+  });
+}
 
 // ── Auto-despawn inactive agents ─────────────────────────
 
@@ -146,16 +176,16 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // Send stored-but-offline main agents as idle residents
+    // Send stored-but-offline agents as idle residents (main + sub-agents)
     const allProfiles = getAllProfiles();
     for (const profile of allProfiles) {
       if (agents.has(profile.agentId)) continue; // already sent as active
-      if (profile.parentId) continue;             // skip sub-agents
       res.write(`data: ${JSON.stringify({
         type: 'agent:spawn',
         agentId: profile.agentId,
         agentName: profile.name,
         agentRole: '',
+        parentId: profile.parentId || undefined,
         level: profile.level || 1,
         title: profile.title || 'Apprentice',
         xp: profile.xp || 0,
@@ -166,6 +196,20 @@ const server = http.createServer(async (req, res) => {
         recentActivity: [],
         clan: profile.clan || null,
         offline: true,
+      })}\n\n`);
+    }
+
+    // Send building state to newly connected dashboard
+    for (const bp of getAllBuildingProfiles()) {
+      res.write(`data: ${JSON.stringify({
+        type: 'building:state',
+        buildingId: bp.buildingId,
+        level: bp.level,
+        title: bp.title,
+        xp: bp.xp,
+        nextLevelXP: bp.nextLevelXP,
+        toolCalls: bp.toolCalls,
+        uniqueVisitors: bp.uniqueVisitors,
       })}\n\n`);
     }
 
@@ -253,12 +297,20 @@ const server = http.createServer(async (req, res) => {
         if (spawnActivity !== 'idle') {
           recordActivity(agentId, spawnActivity, detail);
         }
+        // Track building XP on spawn
+        const spawnBuilding = ACTIVITY_BUILDING[spawnActivity] || 'campfire';
+        recordBuildingVisit(spawnBuilding, agentId);
+        if (spawnActivity !== 'idle') {
+          recordBuildingActivity(spawnBuilding, 1, inputBytes, outputBytes);
+        }
+        updateBuildingXP(spawnBuilding);
+
         broadcast({
           type: 'agent:work',
           agentId,
           activity: spawnActivity,
           detail,
-          targetBuilding: ACTIVITY_BUILDING[spawnActivity] || 'campfire',
+          targetBuilding: spawnBuilding,
         });
       } else {
         // Sub-agent reusing a roster dwarf — count as new spawn for parent
@@ -302,10 +354,20 @@ const server = http.createServer(async (req, res) => {
             totalInputBytes: existing.totalInputBytes,
             totalOutputBytes: existing.totalOutputBytes,
           });
+          // Credit bytes to the building the agent is working in
+          const bytesBuilding = ACTIVITY_BUILDING[effectiveActivity] || 'campfire';
+          recordBuildingActivity(bytesBuilding, 0, inputBytes, outputBytes);
+          updateBuildingXP(bytesBuilding);
         }
         if (activity && activity !== 'idle') {
           // PreToolUse — record tool call
           recordToolUse(agentId);
+
+          // Credit tool call to the building
+          const toolBuilding = ACTIVITY_BUILDING[activity] || 'campfire';
+          recordBuildingActivity(toolBuilding, 1, 0, 0);
+          recordBuildingVisit(toolBuilding, agentId);
+          updateBuildingXP(toolBuilding);
 
           // Check achievement milestones
           const updatedProfile = getEnrichedProfile(agentId);
