@@ -4,31 +4,37 @@
 
 Watch your AI agents work as villagers in an isometric village. Like `htop`, but as a city-builder game.
 
+**Live demo:** [agent-ville.vercel.app](https://agent-ville.vercel.app/)
+
 ## Quick Start
 
+Three steps to see your agents in the village:
+
+### 1. Clone & install
+
 ```bash
+git clone https://github.com/StrSimon/AgentVille.git
+cd AgentVille
 npm install
-npm start
 ```
 
-Dashboard: **http://localhost:5173** — Bridge: **http://localhost:4242**
-
-Or start them separately:
+### 2. Start the bridge
 
 ```bash
-npm run bridge   # Bridge server (port 4242)
-npm run dev      # Dashboard (port 5173)
+npm run bridge
 ```
 
-## Connect Your Project
+The bridge is a tiny local server (port 4242) that receives heartbeats from Claude Code and pushes them to the dashboard.
+
+### 3. Connect your Claude Code sessions
+
+**Option A — per project:**
 
 ```bash
 npm run connect /path/to/your/project
 ```
 
-That's it. Start a new Claude Code session in your project and every tool use automatically shows up as a villager in the village.
-
-### Global Hook (all sessions)
+**Option B — all sessions globally:**
 
 ```bash
 npm run connect:global
@@ -38,6 +44,22 @@ Every Claude Code session on your machine will report to the village. Requires `
 
 ```bash
 npm run connect:global -- --uninstall   # To remove
+```
+
+### 4. Open the dashboard
+
+Use the hosted version at **[agent-ville.vercel.app](https://agent-ville.vercel.app/)** — it connects to your local bridge automatically.
+
+Or run it locally:
+
+```bash
+npm run dev      # http://localhost:5173
+```
+
+Or start both bridge and dashboard at once:
+
+```bash
+npm start        # Bridge (4242) + Dashboard (5173)
 ```
 
 ## Activities & Buildings
@@ -164,3 +186,20 @@ npm run test:coverage   # Full suite with server coverage report
 - **Bridge:** Pure Node.js (zero dependencies)
 - **Protocol:** HTTP + SSE
 - **Tests:** Node.js native runner (server) + Vitest (client)
+- **Hosting:** Vercel (frontend only — bridge always runs locally)
+
+## Browser Notes
+
+The hosted dashboard at [agent-ville.vercel.app](https://agent-ville.vercel.app/) connects to your local bridge over `http://localhost:4242`. This works out of the box in most browsers. If you use **Brave**, you may need to disable Shields for the site (the shield icon in the address bar) to allow the connection.
+
+## Contributing
+
+AgentVille is an open-source side project and contributions are very welcome! Whether it's a bug report, feature request, or pull request — we'd love to hear from you.
+
+- **Found a bug?** [Open an issue](https://github.com/StrSimon/AgentVille/issues)
+- **Have an idea?** [Start a discussion](https://github.com/StrSimon/AgentVille/issues) or open a feature request
+- **Want to contribute?** PRs are welcome — fork, branch, and submit
+
+## License
+
+MIT
