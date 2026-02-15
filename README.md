@@ -76,7 +76,6 @@ npm start        # Bridge (4242) + Dashboard (5173)
 ## Features
 
 - **Isometric village** with animated dwarf agents moving between buildings
-- **PixiJS-powered pixel art view** — toggle with `V` for a hardware-accelerated dwarf village with forests, fireflies, and particle effects
 - **Dwarf-themed speech bubbles** showing what each agent is working on
 - **Level system** — agents gain XP from tool calls and earn titles (Apprentice, Journeyman, Smith, ... Mythical)
 - **Persistent profiles** — agent stats, XP, and activity history survive bridge restarts
@@ -92,7 +91,6 @@ npm start        # Bridge (4242) + Dashboard (5173)
 
 | Key | Action |
 |-----|--------|
-| `V` | Toggle classic / pixel village view |
 | `M` | Toggle sound |
 | `T` | Toggle activity timeline |
 | `D` | Toggle Demo/Live mode |
@@ -143,7 +141,6 @@ curl -s -X POST http://localhost:4242/api/heartbeat \
 src/                          # React frontend (Vite + Tailwind + Framer Motion)
   App.tsx                     # Main orchestrator
   components/                 # Village, Building, AgentAvatar, ThoughtBubble, ...
-  pixi/                       # PixiJS village view (sprites, particles, animations)
   hooks/                      # useBridge (SSE), useSound, useKeyboard
   simulator.ts                # Demo mode event generator
 server/
@@ -157,32 +154,21 @@ server/
 bin/
   connect.sh                  # Per-project hook installer
   connect-global.sh           # Global hook installer
-public/sprites/               # Pixel art assets (buildings, dwarves, props)
 ```
 
 ## Testing
 
 ```bash
-npm test                # Run all 147 tests (server + client)
+npm test                # Run all tests (server + client)
 npm run test:server     # Server tests only (Node.js native runner)
 npm run test:client     # Frontend tests only (Vitest)
-npm run test:coverage   # Full suite with server coverage report
 ```
 
 **Server tests** use Node.js native test runner (`node:test`) — zero external deps. **Frontend tests** use Vitest + testing-library.
 
-| Layer | Module | Lines | Branches |
-|-------|--------|-------|----------|
-| Server | `agentStore.mjs` | 98% | 95% |
-| Server | `bridge.mjs` | 93% | 69% |
-| Server | `dwarfNames.mjs` | 100% | 100% |
-| Client | `simulator.ts`, `types.ts`, `dwarfNames.ts` | tested | — |
-| Client | `useKeyboard` hook | tested | — |
-| Client | `SessionStats`, `ThoughtBubble` | tested | — |
-
 ## Tech Stack
 
-- **Frontend:** React 19 + Tailwind CSS 3 + Framer Motion 11 + PixiJS 8
+- **Frontend:** React 19 + Tailwind CSS 3 + Framer Motion 11
 - **Bridge:** Pure Node.js (zero dependencies)
 - **Protocol:** HTTP + SSE
 - **Tests:** Node.js native runner (server) + Vitest (client)
