@@ -114,6 +114,7 @@ export function AgentAvatar({ agent, targetPosition, centerX, centerY, parentPos
             waiting={agent.waiting}
             isIdleAtCampfire={isIdleAtCampfire}
             previousActivity={agent.previousActivity}
+            failure={agent.failure}
           />
         )}
 

@@ -263,6 +263,83 @@ case "$EVENT" in
     exit 0
     ;;
 
+  SessionStart)
+    # Session started — spawn agent at campfire immediately
+    (curl -s -X POST "$BRIDGE/api/heartbeat" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"idle\",\"detail\":\"arriving\",\"project\":\"$PROJECT\",\"busy\":false}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
+  UserPromptSubmit)
+    # User sent a message — agent wakes up, heads to guild
+    (curl -s -X POST "$BRIDGE/api/heartbeat" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"planning\",\"detail\":\"new orders\",\"project\":\"$PROJECT\",\"busy\":true}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
+  Stop)
+    # Claude finished responding — agent goes idle at campfire
+    (curl -s -X POST "$BRIDGE/api/heartbeat" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"idle\",\"detail\":\"\",\"project\":\"$PROJECT\",\"busy\":false}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
+  PermissionRequest)
+    # Permission dialog shown — instant "waiting for orders"
+    TOOL=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
+    TOOL_ESC=$(echo "$TOOL" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n')
+    (curl -s -X POST "$BRIDGE/api/heartbeat" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"reviewing\",\"detail\":\"$TOOL_ESC\",\"project\":\"$PROJECT\",\"busy\":true,\"waiting\":true}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
+  PostToolUseFailure)
+    # Tool failed — send failure event for dashboard animation
+    TOOL=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
+    ERROR=$(echo "$INPUT" | jq -r '.error // ""' | head -c 40 | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n')
+    AGENT_ID=$(echo "$AGENT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
+    (curl -s -X POST "$BRIDGE/api/event" \
+      -H "Content-Type: application/json" \
+      -d "{\"type\":\"agent:failure\",\"agentId\":\"$AGENT_ID\",\"detail\":\"$TOOL: $ERROR\"}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
+  Notification)
+    # System notification — refresh presence
+    (curl -s -X POST "$BRIDGE/api/heartbeat" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"project\":\"$PROJECT\",\"busy\":false}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
+  PreCompact)
+    # Context compaction — agent "organizes thoughts"
+    (curl -s -X POST "$BRIDGE/api/heartbeat" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"planning\",\"detail\":\"organizing thoughts\",\"project\":\"$PROJECT\",\"busy\":true}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
+  TaskCompleted)
+    # Background task completed — refresh presence
+    (curl -s -X POST "$BRIDGE/api/heartbeat" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\":\"$AGENT_NAME\",\"project\":\"$PROJECT\",\"busy\":false}" \
+      --connect-timeout 1 2>/dev/null || true) &
+    exit 0
+    ;;
+
   *)
     exit 0
     ;;

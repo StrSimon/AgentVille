@@ -23,6 +23,7 @@ export interface AgentState {
   isSubAgent?: boolean;
   previousActivity?: ActivityType;
   waiting?: boolean;
+  failure?: string;
   totalInputBytes: number;
   totalOutputBytes: number;
   subAgentsSpawned: number;
@@ -64,7 +65,8 @@ export interface AgentEvent {
     | 'agent:levelup'
     | 'agent:xp'
     | 'agent:waiting'
-    | 'agent:achievement';
+    | 'agent:achievement'
+    | 'agent:failure';
   agentId: string;
   agentName?: string;
   agentRole?: string;
