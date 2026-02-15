@@ -7,9 +7,4 @@ _archive/
 .env
 .env.*
 .DS_Store
-PLAN.md
 .claude/data/
-.claude/agent-roster
-.claude/agent-roster-sub
-.claude/agent-locks/
-.claude/agent-locks-sub/
