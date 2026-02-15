@@ -8,6 +8,12 @@ interface ThoughtBubbleProps {
   color: string;
   /** Hash-based horizontal offset to prevent overlap (-1 = left, 0 = center, 1 = right) */
   offsetDir?: number;
+  /** Agent is waiting for user input — show persistent bubble */
+  waiting?: boolean;
+  /** Agent is idle at the campfire */
+  isIdleAtCampfire?: boolean;
+  /** Previous activity (for victory detection after testing) */
+  previousActivity?: ActivityType | null;
 }
 
 const ACTIVITY_ICON: Record<string, string> = {
@@ -68,6 +74,37 @@ const DWARF_IDLE = [
   'Puffing smoke\u2026',
 ];
 
+const DWARF_WAITING = [
+  'Awaiting orders, chief!',
+  'Need yer input, boss!',
+  'Waitin\u2019 on ye, chief!',
+  'Oi! Need instructions!',
+  'Standing by for orders!',
+];
+
+const CAMPFIRE_STORIES = [
+  'Remember that refactor\u2026',
+  'The tests were fierce today\u2026',
+  'I once compiled 500 files\u2026',
+  'Back in my day, no types\u2026',
+  'Did ye hear the merge conflict?',
+  'The linter spared no one\u2026',
+  'That bug took three days\u2026',
+  'Legend says the build still runs\u2026',
+  'I dream of zero warnings\u2026',
+  'The CI was relentless\u2026',
+  'Three deploys before breakfast!',
+  'The code review was brutal\u2026',
+];
+
+const VICTORY_PHRASES = [
+  'Victory! Tests pass!',
+  'The blade holds true!',
+  'All tests conquered!',
+  'Arena cleared!',
+  'Battle won!',
+];
+
 /** Deterministic pick based on string hash */
 function pick<T>(arr: T[], seed: string): T {
   const h = seed.split('').reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
@@ -116,12 +153,22 @@ function dwarfSpeak(activity: ActivityType, detail: string): string {
   }
 }
 
-export function ThoughtBubble({ detail, activity, color, offsetDir = 0 }: ThoughtBubbleProps) {
+export function ThoughtBubble({ detail, activity, color, offsetDir = 0, waiting = false, isIdleAtCampfire = false, previousActivity = null }: ThoughtBubbleProps) {
   const [visible, setVisible] = useState(false);
   const [currentDetail, setCurrentDetail] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [storyText, setStoryText] = useState<string | null>(null);
+  const storyTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [showVictory, setShowVictory] = useState(false);
 
   useEffect(() => {
+    // Waiting mode — always visible, no auto-hide
+    if (waiting) {
+      setVisible(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      return;
+    }
+
     if (!detail || detail === currentDetail) return;
     setCurrentDetail(detail);
     setVisible(true);
@@ -131,10 +178,55 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0 }: Though
     timerRef.current = setTimeout(() => setVisible(false), SHOW_DURATION);
 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [detail]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [detail, waiting]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const icon = ACTIVITY_ICON[activity] || '';
-  const dwarf = dwarfSpeak(activity, currentDetail);
+  useEffect(() => {
+    if (!isIdleAtCampfire || waiting) {
+      setStoryText(null);
+      if (storyTimerRef.current) clearTimeout(storyTimerRef.current);
+      return;
+    }
+
+    function showStory() {
+      const story = CAMPFIRE_STORIES[Math.floor(Math.random() * CAMPFIRE_STORIES.length)];
+      setStoryText(story);
+      // Hide after 4 seconds, then schedule next in 8-15s
+      storyTimerRef.current = setTimeout(() => {
+        setStoryText(null);
+        storyTimerRef.current = setTimeout(showStory, 8000 + Math.random() * 7000);
+      }, 4000);
+    }
+
+    // First story after 5-10 seconds of being idle at campfire
+    storyTimerRef.current = setTimeout(showStory, 5000 + Math.random() * 5000);
+    return () => { if (storyTimerRef.current) clearTimeout(storyTimerRef.current); };
+  }, [isIdleAtCampfire, waiting]);
+
+  useEffect(() => {
+    if (previousActivity === 'testing' && activity !== 'testing') {
+      setShowVictory(true);
+      const timer = setTimeout(() => setShowVictory(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [previousActivity, activity]);
+
+  const isStoryMode = isIdleAtCampfire && !waiting && storyText;
+  const isVictoryMode = showVictory;
+  const isWaiting = waiting;
+
+  const icon = isVictoryMode ? '⚔️'
+    : isStoryMode ? '🔥'
+    : isWaiting ? '⏳'
+    : (ACTIVITY_ICON[activity] || '');
+
+  const dwarf = isVictoryMode
+    ? pick(VICTORY_PHRASES, currentDetail || 'victory')
+    : isStoryMode
+    ? storyText!
+    : isWaiting
+    ? pick(DWARF_WAITING, currentDetail || 'wait')
+    : dwarfSpeak(activity, currentDetail);
+
   const text = dwarf.length > 38 ? dwarf.slice(0, 36) + '\u2026' : dwarf;
 
   // Offset bubble position based on hash direction
@@ -143,9 +235,9 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0 }: Though
 
   return (
     <AnimatePresence>
-      {visible && currentDetail && (
+      {(visible && (isWaiting || currentDetail) || isStoryMode || isVictoryMode) && (
         <motion.div
-          key={currentDetail}
+          key={isWaiting ? 'waiting' : currentDetail}
           className="absolute flex flex-col items-center pointer-events-none"
           style={{
             bottom: '100%',
@@ -158,19 +250,27 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0 }: Though
           exit={{ opacity: 0, scale: 0.8, y: -2 }}
           transition={{ duration: 0.2 }}
         >
-          <div
+          <motion.div
             className="relative px-1.5 py-0.5 rounded whitespace-nowrap"
             style={{
-              background: 'rgba(0,0,0,0.85)',
-              border: `1px solid ${color}33`,
+              background: isWaiting ? 'rgba(30,10,0,0.92)' : 'rgba(0,0,0,0.85)',
+              border: `1px solid ${isWaiting ? '#f59e0b88' : `${color}33`}`,
               maxWidth: 220,
             }}
+            animate={isWaiting ? {
+              borderColor: ['#f59e0b88', '#f59e0bdd', '#f59e0b88'],
+            } : {}}
+            transition={isWaiting ? {
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            } : {}}
           >
-            <span className="text-[7px] leading-tight" style={{ color: `${color}bb` }}>
+            <span className="text-[7px] leading-tight" style={{ color: isWaiting ? '#fbbf24' : `${color}bb` }}>
               {icon && <span className="mr-0.5">{icon}</span>}
               <span>{text}</span>
             </span>
-          </div>
+          </motion.div>
           {/* Tiny tail */}
           <div
             style={{
@@ -178,7 +278,7 @@ export function ThoughtBubble({ detail, activity, color, offsetDir = 0 }: Though
               height: 0,
               borderLeft: '3px solid transparent',
               borderRight: '3px solid transparent',
-              borderTop: '3px solid rgba(0,0,0,0.85)',
+              borderTop: `3px solid ${isWaiting ? 'rgba(30,10,0,0.92)' : 'rgba(0,0,0,0.85)'}`,
             }}
           />
         </motion.div>

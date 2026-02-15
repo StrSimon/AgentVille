@@ -81,6 +81,9 @@ export function HtmlOverlay({ agents, buildings, positions }: HtmlOverlayProps) 
                   activity={agent.activity}
                   color={agent.color}
                   offsetDir={0}
+                  waiting={agent.waiting}
+                  isIdleAtCampfire={agent.activity === 'idle' && agent.targetBuilding === 'campfire'}
+                  previousActivity={agent.previousActivity}
                 />
               </div>
             )}

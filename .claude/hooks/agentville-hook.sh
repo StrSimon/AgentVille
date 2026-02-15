@@ -176,6 +176,23 @@ case "$EVENT" in
         # causes the agent to appear stuck on "planning".
         exit 0
         ;;
+      AskUserQuestion)
+        ACTIVITY="reviewing"
+        DETAIL=$(echo "$INPUT" | jq -r '.tool_input.questions[0].question // ""')
+        DETAIL="${DETAIL:0:30}"
+        # Escape detail early, send waiting heartbeat, and exit
+        DETAIL=$(echo "$DETAIL" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n')
+        (curl -s -X POST "$BRIDGE/api/heartbeat" \
+          -H "Content-Type: application/json" \
+          -d "{\"agent\":\"$AGENT_NAME\",\"activity\":\"$ACTIVITY\",\"detail\":\"$DETAIL\",\"project\":\"$PROJECT\",\"busy\":true,\"waiting\":true}" \
+          --connect-timeout 1 2>/dev/null || true) &
+        exit 0
+        ;;
+      mcp__*)
+        ACTIVITY="researching"
+        DETAIL=$(echo "$TOOL" | sed 's/mcp__[^_]*__//')
+        DETAIL="${DETAIL:0:30}"
+        ;;
       *)
         ACTIVITY="coding"
         ;;
@@ -183,7 +200,9 @@ case "$EVENT" in
     ;;
 
   PostToolUse)
-    # Track token usage by measuring payload sizes
+    # Tool finished — send byte stats only, do NOT change activity.
+    # The agent stays at its current building until the next PreToolUse
+    # or until the bridge's soft-idle timer moves it to campfire.
     TOOL=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
     # Skip our own heartbeat curls
     if [ "$TOOL" = "Bash" ]; then
