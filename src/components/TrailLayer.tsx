@@ -5,6 +5,7 @@ interface TrailLayerProps {
   trails: Trail[];
   centerX: number;
   centerY: number;
+  spread?: number;
 }
 
 /**
@@ -35,7 +36,7 @@ function getCurvePath(
   return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
 }
 
-export function TrailLayer({ trails, centerX, centerY }: TrailLayerProps) {
+export function TrailLayer({ trails, centerX, centerY, spread = 1 }: TrailLayerProps) {
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
@@ -46,10 +47,10 @@ export function TrailLayer({ trails, centerX, centerY }: TrailLayerProps) {
           <linearGradient
             key={`grad-${trail.id}`}
             id={`trail-grad-${trail.id}`}
-            x1={centerX + trail.fromPos.x}
-            y1={centerY + trail.fromPos.y}
-            x2={centerX + trail.toPos.x}
-            y2={centerY + trail.toPos.y}
+            x1={centerX + trail.fromPos.x * spread}
+            y1={centerY + trail.fromPos.y * spread}
+            x2={centerX + trail.toPos.x * spread}
+            y2={centerY + trail.toPos.y * spread}
             gradientUnits="userSpaceOnUse"
           >
             <stop offset="0%" stopColor={trail.color} stopOpacity="0.05" />
@@ -63,10 +64,10 @@ export function TrailLayer({ trails, centerX, centerY }: TrailLayerProps) {
       {/* Curved trail paths */}
       <AnimatePresence>
         {trails.map(trail => {
-          const x1 = centerX + trail.fromPos.x;
-          const y1 = centerY + trail.fromPos.y;
-          const x2 = centerX + trail.toPos.x;
-          const y2 = centerY + trail.toPos.y;
+          const x1 = centerX + trail.fromPos.x * spread;
+          const y1 = centerY + trail.fromPos.y * spread;
+          const x2 = centerX + trail.toPos.x * spread;
+          const y2 = centerY + trail.toPos.y * spread;
           const path = getCurvePath(x1, y1, x2, y2, centerX, centerY);
 
           return (
@@ -95,8 +96,8 @@ export function TrailLayer({ trails, centerX, centerY }: TrailLayerProps) {
         {trails.map(trail => (
           <motion.circle
             key={`dot-${trail.id}`}
-            cx={centerX + trail.toPos.x}
-            cy={centerY + trail.toPos.y}
+            cx={centerX + trail.toPos.x * spread}
+            cy={centerY + trail.toPos.y * spread}
             r={3}
             fill={trail.color}
             initial={{ opacity: 0 }}
@@ -113,10 +114,10 @@ export function TrailLayer({ trails, centerX, centerY }: TrailLayerProps) {
       {/* Moving dot along newest trails */}
       <AnimatePresence>
         {trails.slice(-3).map(trail => {
-          const x1 = centerX + trail.fromPos.x;
-          const y1 = centerY + trail.fromPos.y;
-          const x2 = centerX + trail.toPos.x;
-          const y2 = centerY + trail.toPos.y;
+          const x1 = centerX + trail.fromPos.x * spread;
+          const y1 = centerY + trail.fromPos.y * spread;
+          const x2 = centerX + trail.toPos.x * spread;
+          const y2 = centerY + trail.toPos.y * spread;
           const path = getCurvePath(x1, y1, x2, y2, centerX, centerY);
 
           return (

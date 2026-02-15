@@ -19,9 +19,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@pixi/react": "^8.0.5",
     "framer-motion": "^11.0.0",
-    "pixi.js": "^8.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

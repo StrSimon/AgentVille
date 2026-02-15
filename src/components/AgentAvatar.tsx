@@ -38,7 +38,14 @@ export function AgentAvatar({ agent, targetPosition, centerX, centerY, parentPos
 
   // Idle wandering offset (classic view)
   const isIdleAtCampfire = agent.activity === 'idle' && agent.targetBuilding === 'campfire';
-  const [wanderOffset, setWanderOffset] = useState({ x: 0, y: 0 });
+
+  // Deterministic initial spread so idle agents don't cluster on spawn
+  const initialAngle = ((hash + 30) / 60) * Math.PI * 2 + ((hash2 + 15) / 30) * Math.PI;
+  const initialDist = 25 + Math.abs(hash * 1.5);
+  const [wanderOffset, setWanderOffset] = useState({
+    x: isIdleAtCampfire ? Math.cos(initialAngle) * initialDist : 0,
+    y: isIdleAtCampfire ? Math.sin(initialAngle) * initialDist : 0,
+  });
 
   useEffect(() => {
     if (!isIdleAtCampfire) {
@@ -48,16 +55,16 @@ export function AgentAvatar({ agent, targetPosition, centerX, centerY, parentPos
     let timer: ReturnType<typeof setTimeout>;
     function wander() {
       const angle = Math.random() * Math.PI * 2;
-      const dist = 15 + Math.random() * 25;
+      const dist = 25 + Math.random() * 50;
       setWanderOffset({ x: Math.cos(angle) * dist, y: Math.sin(angle) * dist });
-      timer = setTimeout(wander, 3000 + Math.random() * 3000);
+      timer = setTimeout(wander, 3000 + Math.random() * 4000);
     }
-    timer = setTimeout(wander, 2000 + Math.random() * 2000);
+    timer = setTimeout(wander, 1000 + Math.random() * 2000);
     return () => clearTimeout(timer);
   }, [isIdleAtCampfire]);
 
   const x = centerX + targetPosition.x + hash + wanderOffset.x;
-  const y = centerY + targetPosition.y + 50 + Math.abs(hash2) + wanderOffset.y;
+  const y = centerY + targetPosition.y + hash2 + wanderOffset.y;
 
   return (
     <>
