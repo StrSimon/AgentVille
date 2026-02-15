@@ -431,6 +431,92 @@ describe('Heartbeat without activity (PostToolUse)', () => {
   });
 });
 
+// ── Building XP via SSE ──────────────────────────────────
+
+describe('Building XP tracking', () => {
+  it('should send building:state events to new SSE clients', async () => {
+    // Ensure at least one agent has worked so a building has XP
+    await post('/api/heartbeat', { agent: 'Building Test Agent', activity: 'coding', busy: true });
+
+    const events = [];
+    const controller = new AbortController();
+    const res = await fetch(`${BASE}/events`, { signal: controller.signal });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    // Read initial state events
+    const reading = (async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value);
+        for (const line of text.split('\n')) {
+          if (line.startsWith('data: ')) {
+            events.push(JSON.parse(line.slice(6)));
+          }
+        }
+      }
+    })();
+
+    await new Promise(r => setTimeout(r, 500));
+    controller.abort();
+    await reading.catch(() => {});
+
+    const buildingEvents = events.filter(e => e.type === 'building:state');
+    assert.ok(buildingEvents.length > 0, 'Should receive building:state events on SSE connect');
+
+    // Each building:state event should have expected fields
+    for (const evt of buildingEvents) {
+      assert.ok(evt.buildingId, 'building:state should have buildingId');
+      assert.equal(typeof evt.level, 'number');
+      assert.equal(typeof evt.title, 'string');
+      assert.equal(typeof evt.xp, 'number');
+    }
+  });
+
+  it('should send building:xp events when agent works', async () => {
+    const events = [];
+    const controller = new AbortController();
+    const res = await fetch(`${BASE}/events`, { signal: controller.signal });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    const reading = (async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value);
+        for (const line of text.split('\n')) {
+          if (line.startsWith('data: ')) {
+            events.push(JSON.parse(line.slice(6)));
+          }
+        }
+      }
+    })();
+
+    await new Promise(r => setTimeout(r, 200));
+
+    // Send a heartbeat with a tool use — triggers building:xp
+    await post('/api/heartbeat', {
+      agent: 'Building XP Agent',
+      activity: 'coding',
+      busy: true,
+    });
+
+    await new Promise(r => setTimeout(r, 300));
+    controller.abort();
+    await reading.catch(() => {});
+
+    const xpEvents = events.filter(e => e.type === 'building:xp');
+    assert.ok(xpEvents.length > 0, 'Should receive building:xp events from agent activity');
+
+    const xpEvent = xpEvents[0];
+    assert.ok(xpEvent.buildingId, 'building:xp should have buildingId');
+    assert.equal(typeof xpEvent.level, 'number');
+    assert.equal(typeof xpEvent.xp, 'number');
+  });
+});
+
 // ── 404 ──────────────────────────────────────────────────
 
 describe('Unknown routes', () => {

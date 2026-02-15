@@ -44,6 +44,12 @@ export interface BuildingState {
   glowColor: string;
   icon: string;
   activeAgents: string[];
+  level: number;
+  title: string;
+  xp: number;
+  nextLevelXP: number | null;
+  toolCalls?: number;
+  uniqueVisitors?: number;
 }
 
 export interface Trail {
@@ -67,7 +73,9 @@ export interface AgentEvent {
     | 'agent:xp'
     | 'agent:waiting'
     | 'agent:achievement'
-    | 'agent:failure';
+    | 'agent:failure'
+    | 'building:xp'
+    | 'building:state';
   agentId: string;
   agentName?: string;
   agentRole?: string;
@@ -89,6 +97,9 @@ export interface AgentEvent {
   waiting?: boolean;
   achievement?: string;
   offline?: boolean;
+  buildingId?: string;
+  toolCalls?: number;
+  uniqueVisitors?: number;
 }
 
 // ── Clan colors ─────────────────────────────────────────
