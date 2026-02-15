@@ -153,7 +153,7 @@ case "$EVENT" in
         ;;
       Bash)
         CMD=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
-        if echo "$CMD" | grep -qiE '(test|spec|jest|pytest|vitest|mocha|bun test|npm test)'; then
+        if echo "$CMD" | grep -qiE '(node --test|npm test|npx test|bun test|jest|pytest|vitest|mocha|cargo test|go test|\.test\.|\.spec\.)'; then
           ACTIVITY="testing"
           # Extract test command name
           DETAIL=$(echo "$CMD" | head -c 30)
