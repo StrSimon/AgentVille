@@ -20,14 +20,22 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // ""')
 # Derive agent name from project directory
 PROJECT=$(basename "$CWD" 2>/dev/null || echo "unknown")
 
+# ── AgentVille data directory ────────────────────────────────
+# All roster and lock files live in the AgentVille project, NOT in
+# the monitored project's .claude/ folder. This prevents polluting
+# other repos with AgentVille-specific files.
+AGENTVILLE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+DATA_DIR="$AGENTVILLE_DIR/data"
+mkdir -p "$DATA_DIR" 2>/dev/null
+
 # ── Resident roster — persistent dwarf pool per project ─────
-# Each project has a roster of known dwarves (.claude/agent-roster).
+# Each project has a roster of known dwarves.
 # When a session starts, it claims the first free dwarf in order.
 # If all are busy (parallel sessions), a new dwarf is created and
 # added to the roster. Lock files go stale after 3 min of inactivity,
 # so a returning session reclaims the same dwarf (typically #1).
-ROSTER_FILE="$CWD/.claude/agent-roster"
-LOCKS_DIR="$CWD/.claude/agent-locks"
+ROSTER_FILE="$DATA_DIR/agent-roster"
+LOCKS_DIR="$DATA_DIR/agent-locks"
 mkdir -p "$LOCKS_DIR" 2>/dev/null
 
 # ── Sub-agent roster — same concept for sub-agents ──────────
@@ -35,8 +43,8 @@ mkdir -p "$LOCKS_DIR" 2>/dev/null
 # and accumulate XP over time. Lock staleness is 10 min (matches
 # the bridge despawn timeout). Reverse-mapping files (_map_*) let
 # SubagentStop find which roster dwarf to release.
-SUB_ROSTER_FILE="$CWD/.claude/agent-roster-sub"
-SUB_LOCKS_DIR="$CWD/.claude/agent-locks-sub"
+SUB_ROSTER_FILE="$DATA_DIR/agent-roster-sub"
+SUB_LOCKS_DIR="$DATA_DIR/agent-locks-sub"
 mkdir -p "$SUB_LOCKS_DIR" 2>/dev/null
 
 claim_sub_dwarf() {
