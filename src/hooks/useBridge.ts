@@ -8,6 +8,7 @@ export function useBridge(
   enabled: boolean,
 ) {
   const [connected, setConnected] = useState(false);
+  const [everConnected, setEverConnected] = useState(false);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
@@ -28,6 +29,7 @@ export function useBridge(
 
       es.onopen = () => {
         setConnected(true);
+        setEverConnected(true);
       };
 
       es.onmessage = (e) => {
@@ -56,5 +58,5 @@ export function useBridge(
     };
   }, [enabled]);
 
-  return { connected };
+  return { connected, everConnected };
 }

@@ -9,6 +9,7 @@ import { useKeyboard } from './hooks/useKeyboard'
 import { SessionStats } from './components/SessionStats'
 import { ResidentDirectory } from './components/ResidentDirectory'
 import { AchievementBanner } from './components/AchievementBanner'
+import { LandingPage } from './components/LandingPage'
 import type { AgentState, BuildingState, AgentEvent, ActivityType, Trail } from './types'
 
 const AGENT_COLORS = [
@@ -489,7 +490,7 @@ export default function App() {
   }, [getBuildingPosition, sound]);
 
   // Bridge connection (live mode)
-  const { connected } = useBridge(handleEvent, mode === 'live');
+  const { connected, everConnected } = useBridge(handleEvent, mode === 'live');
 
   // Clear agents when switching modes
   const switchMode = useCallback((newMode: 'live' | 'demo') => {
@@ -551,6 +552,11 @@ export default function App() {
   // Selected agent for stats panel
   const selectedAgent = selectedAgentId ? agents.get(selectedAgentId) || null : null;
   const selectedHistory = selectedAgentId ? activityHistory.get(selectedAgentId) || [] : [];
+
+  // Show landing page when bridge has never connected in live mode
+  if (mode === 'live' && !everConnected) {
+    return <LandingPage connected={connected} onDemo={() => switchMode('demo')} />;
+  }
 
   return (
     <div className="w-full h-full relative overflow-hidden" style={{ background: '#0a0a1a' }}>
