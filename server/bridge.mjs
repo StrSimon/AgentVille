@@ -101,10 +101,11 @@ setInterval(() => {
 // ── Server ───────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
-  // CORS
+  // CORS — Allow-Private-Network lets HTTPS sites (e.g. Vercel) reach localhost
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
