@@ -215,7 +215,16 @@ const server = http.createServer(async (req, res) => {
     }
 
     sseClients.add(res);
-    req.on('close', () => sseClients.delete(res));
+
+    // SSE keepalive — prevents proxies/browsers from dropping idle connections
+    const keepalive = setInterval(() => {
+      res.write(': keepalive\n\n');
+    }, 30000);
+
+    req.on('close', () => {
+      clearInterval(keepalive);
+      sseClients.delete(res);
+    });
     return;
   }
 
