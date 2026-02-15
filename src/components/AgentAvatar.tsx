@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ThoughtBubble } from './ThoughtBubble'
 import { getClanColor } from '../types'
@@ -35,8 +36,28 @@ export function AgentAvatar({ agent, targetPosition, centerX, centerY, parentPos
   const hash2 =
     (agent.id.charCodeAt(Math.floor(agent.id.length / 2)) * 11 + agent.id.length * 7) % 30 - 15;
 
-  const x = centerX + targetPosition.x + hash;
-  const y = centerY + targetPosition.y + 50 + Math.abs(hash2);
+  // Idle wandering offset (classic view)
+  const isIdleAtCampfire = agent.activity === 'idle' && agent.targetBuilding === 'campfire';
+  const [wanderOffset, setWanderOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!isIdleAtCampfire) {
+      setWanderOffset({ x: 0, y: 0 });
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout>;
+    function wander() {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 15 + Math.random() * 25;
+      setWanderOffset({ x: Math.cos(angle) * dist, y: Math.sin(angle) * dist });
+      timer = setTimeout(wander, 3000 + Math.random() * 3000);
+    }
+    timer = setTimeout(wander, 2000 + Math.random() * 2000);
+    return () => clearTimeout(timer);
+  }, [isIdleAtCampfire]);
+
+  const x = centerX + targetPosition.x + hash + wanderOffset.x;
+  const y = centerY + targetPosition.y + 50 + Math.abs(hash2) + wanderOffset.y;
 
   return (
     <>
@@ -90,6 +111,9 @@ export function AgentAvatar({ agent, targetPosition, centerX, centerY, parentPos
             activity={agent.activity}
             color={agent.color}
             offsetDir={hash > 0 ? 1 : hash < -10 ? -1 : 0}
+            waiting={agent.waiting}
+            isIdleAtCampfire={isIdleAtCampfire}
+            previousActivity={agent.previousActivity}
           />
         )}
 

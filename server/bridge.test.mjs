@@ -386,6 +386,51 @@ describe('Heartbeat busy state', () => {
   });
 });
 
+// ── Heartbeat without activity (PostToolUse) ────────────
+
+describe('Heartbeat without activity (PostToolUse)', () => {
+  it('should keep existing activity when no activity field provided', async () => {
+    // First set agent to coding
+    await post('/api/heartbeat', {
+      agent: 'Sticky-Agent',
+      activity: 'coding',
+      detail: 'file.ts',
+      busy: true,
+    });
+
+    // PostToolUse: send bytes only, no activity field
+    await post('/api/heartbeat', {
+      agent: 'Sticky-Agent',
+      inputBytes: 500,
+      outputBytes: 300,
+      busy: false,
+    });
+
+    const { data } = await get('/api/status');
+    const agent = data.agents['sticky-agent'];
+    assert.equal(agent.activity, 'coding'); // Should still be coding!
+    assert.equal(agent.busy, false);
+  });
+
+  it('should still change activity when explicitly provided', async () => {
+    await post('/api/heartbeat', {
+      agent: 'Sticky-Agent2',
+      activity: 'coding',
+      busy: true,
+    });
+
+    await post('/api/heartbeat', {
+      agent: 'Sticky-Agent2',
+      activity: 'researching',
+      detail: 'types.ts',
+      busy: true,
+    });
+
+    const { data } = await get('/api/status');
+    assert.equal(data.agents['sticky-agent2'].activity, 'researching');
+  });
+});
+
 // ── 404 ──────────────────────────────────────────────────
 
 describe('Unknown routes', () => {

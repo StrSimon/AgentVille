@@ -66,6 +66,26 @@ setInterval(() => {
   }
 }, 5000);
 
+// ── Soft-idle: move agents to campfire when no heartbeats arrive ───
+// 2 min threshold — Claude often thinks 30-60s between tool calls,
+// so a short timeout causes false idle bounces.
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, agent] of agents) {
+    if (agent.activity !== 'idle' && !agent.busy && now - agent.lastSeen > 120_000) {
+      agent.activity = 'idle';
+      console.log(`  💤 ${agent.name} went idle (no activity)`);
+      broadcast({
+        type: 'agent:work',
+        agentId: id,
+        activity: 'idle',
+        detail: '',
+        targetBuilding: 'campfire',
+      });
+    }
+  }
+}, 10_000);
+
 // ── Server ───────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -133,6 +153,15 @@ const server = http.createServer(async (req, res) => {
           })}\n\n`,
         );
       }
+      if (agent.waiting) {
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'agent:waiting',
+            agentId: id,
+            waiting: true,
+          })}\n\n`,
+        );
+      }
     }
 
     sseClients.add(res);
@@ -147,7 +176,7 @@ const server = http.createServer(async (req, res) => {
       const data = JSON.parse(body);
       const rawName = data.agent || 'Unknown Agent';
       const agentId = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const activity = data.activity || 'idle';
+      const activity = data.activity || null;
       const detail = data.detail || '';
       const project = data.project || '';
       const inputBytes = parseInt(data.inputBytes) || 0;
@@ -165,12 +194,13 @@ const server = http.createServer(async (req, res) => {
         const storedName = getStoredName(agentId);
         const dwarfName = storedName || getDwarfName(agentId);
         const isSubAgent = !!parentId;
+        const spawnActivity = activity || 'idle';
 
         // Initialize/update persistent profile
         getProfile(agentId, dwarfName, parentId, project);
         recordSession(agentId);
         // Count the first tool call (previously missed on spawn)
-        if (activity && activity !== 'idle') {
+        if (spawnActivity !== 'idle') {
           recordToolUse(agentId);
         }
         if (inputBytes || outputBytes) {
@@ -181,7 +211,7 @@ const server = http.createServer(async (req, res) => {
         }
         const enriched = getEnrichedProfile(agentId);
 
-        console.log(`  ⬆ ${dwarfName} joined (${activity}) Lv.${enriched?.level || 1} ${enriched?.title || ''}${isSubAgent ? ` [child of ${parentId}]` : ''} [${rawName}]`);
+        console.log(`  ⬆ ${dwarfName} joined (${spawnActivity}) Lv.${enriched?.level || 1} ${enriched?.title || ''}${isSubAgent ? ` [child of ${parentId}]` : ''} [${rawName}]`);
         // Restore historical byte totals from store
         const histInputBytes = enriched?.totalInputBytes || 0;
         const histOutputBytes = enriched?.totalOutputBytes || 0;
@@ -189,10 +219,11 @@ const server = http.createServer(async (req, res) => {
         agents.set(agentId, {
           name: dwarfName,
           role: rawName,
-          activity,
+          activity: spawnActivity,
           detail,
           project,
           busy: !!data.busy,
+          waiting: !!data.waiting,
           totalInputBytes: histInputBytes + inputBytes,
           totalOutputBytes: histOutputBytes + outputBytes,
           spawnedAt: Date.now(),
@@ -214,15 +245,15 @@ const server = http.createServer(async (req, res) => {
         if (project) spawnEvent.project = project;
         spawnEvent.clan = enriched?.clan || project || null;
         broadcast(spawnEvent);
-        if (activity && activity !== 'idle') {
-          recordActivity(agentId, activity, detail);
+        if (spawnActivity !== 'idle') {
+          recordActivity(agentId, spawnActivity, detail);
         }
         broadcast({
           type: 'agent:work',
           agentId,
-          activity,
+          activity: spawnActivity,
           detail,
-          targetBuilding: ACTIVITY_BUILDING[activity] || 'campfire',
+          targetBuilding: ACTIVITY_BUILDING[spawnActivity] || 'campfire',
         });
       } else {
         // Sub-agent reusing a roster dwarf — count as new spawn for parent
@@ -233,22 +264,30 @@ const server = http.createServer(async (req, res) => {
           console.log(`  ⬆ ${existing.name} re-activated [child of ${parentId}]`);
         }
 
-        const isPostToolUse = !!(inputBytes || outputBytes) && activity === 'idle';
-        const effectiveActivity = isPostToolUse ? existing.activity : activity;
-        const activityChanged = existing.activity !== effectiveActivity;
+        // Only update activity if explicitly provided (null = PostToolUse, keep current)
+        const effectiveActivity = activity || existing.activity;
+        const activityChanged = activity !== null && existing.activity !== activity;
         const detailChanged = detail && existing.detail !== detail;
-        if (!isPostToolUse) existing.activity = effectiveActivity;
+        if (activity) existing.activity = activity;
         if (detail) existing.detail = detail;
         if (project) existing.project = project;
         if (data.busy !== undefined) existing.busy = !!data.busy;
         existing.lastSeen = Date.now();
+
+        // Track waiting state (set by AskUserQuestion, cleared by any non-idle activity)
+        const wasWaiting = existing.waiting;
+        if (data.waiting) {
+          existing.waiting = true;
+        } else if (activity && activity !== 'idle') {
+          existing.waiting = false;
+        }
 
         // Track persistent stats
         const prevEnriched = getEnrichedProfile(agentId);
         const prevLevel = prevEnriched?.level || 1;
 
         if (inputBytes || outputBytes) {
-          // PostToolUse — record bytes (don't change activity)
+          // PostToolUse — record bytes
           recordBytes(agentId, inputBytes, outputBytes);
           existing.totalInputBytes = (existing.totalInputBytes || 0) + inputBytes;
           existing.totalOutputBytes = (existing.totalOutputBytes || 0) + outputBytes;
@@ -258,9 +297,26 @@ const server = http.createServer(async (req, res) => {
             totalInputBytes: existing.totalInputBytes,
             totalOutputBytes: existing.totalOutputBytes,
           });
-        } else if (activity && activity !== 'idle') {
+        }
+        if (activity && activity !== 'idle') {
           // PreToolUse — record tool call
           recordToolUse(agentId);
+
+          // Check achievement milestones
+          const updatedProfile = getEnrichedProfile(agentId);
+          if (updatedProfile) {
+            const tc = updatedProfile.toolCalls;
+            const milestones = [100, 500, 1000, 2500, 5000, 10000];
+            if (milestones.includes(tc)) {
+              console.log(`  🏆 ${existing.name} reached ${tc} tool calls!`);
+              broadcast({
+                type: 'agent:achievement',
+                agentId,
+                agentName: existing.name,
+                achievement: `${existing.name} reached ${tc} tool calls!`,
+              });
+            }
+          }
         }
 
         // Broadcast XP update (every heartbeat, so dashboard stays current)
@@ -292,6 +348,18 @@ const server = http.createServer(async (req, res) => {
             activity: effectiveActivity,
             detail: existing.detail,
             targetBuilding: ACTIVITY_BUILDING[effectiveActivity] || 'campfire',
+          });
+        }
+
+        // Broadcast waiting state changes
+        if (existing.waiting !== wasWaiting) {
+          if (existing.waiting) {
+            console.log(`  ⏳ ${existing.name} is waiting for input`);
+          }
+          broadcast({
+            type: 'agent:waiting',
+            agentId,
+            waiting: existing.waiting,
           });
         }
       }

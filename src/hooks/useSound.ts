@@ -8,6 +8,8 @@ export function useSound(): {
   playSpawn: () => void;
   playDespawn: () => void;
   playMove: () => void;
+  playVictory: () => void;
+  playAchievement: () => void;
 } {
   const [enabled, setEnabled] = useState(
     () => localStorage.getItem(STORAGE_KEY) === "true",
@@ -110,5 +112,49 @@ export function useSound(): {
     source.stop(now + dur);
   }, [enabled, getCtx]);
 
-  return { enabled, toggle, playSpawn, playDespawn, playMove };
+  const playVictory = useCallback(() => {
+    if (!enabled) return;
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    // Ascending chord: C-E-G-C (0.5s, sine)
+    const notes = [262, 330, 392, 523];
+    for (let i = 0; i < notes.length; i++) {
+      const gain = ctx.createGain();
+      const t = now + i * 0.1;
+      gain.gain.setValueAtTime(0.07, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      gain.connect(ctx.destination);
+
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(notes[i], t);
+      osc.connect(gain);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    }
+  }, [enabled, getCtx]);
+
+  const playAchievement = useCallback(() => {
+    if (!enabled) return;
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    // Fanfare arpeggio: 5 notes ascending (0.7s, triangle)
+    const notes = [392, 494, 587, 659, 784];
+    for (let i = 0; i < notes.length; i++) {
+      const gain = ctx.createGain();
+      const t = now + i * 0.12;
+      gain.gain.setValueAtTime(0.06, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      gain.connect(ctx.destination);
+
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(notes[i], t);
+      osc.connect(gain);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    }
+  }, [enabled, getCtx]);
+
+  return { enabled, toggle, playSpawn, playDespawn, playMove, playVictory, playAchievement };
 }

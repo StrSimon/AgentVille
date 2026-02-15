@@ -31,6 +31,8 @@ export function PixiDwarf({ agent, buildingPos, textures, onAgentClick, onPositi
   const moveTarget = useRef({ x: targetX, y: targetY });
   const moveProgress = useRef(1);
   const elapsed = useRef(0);
+  const wanderTimer = useRef(0);
+  const isWandering = useRef(false);
   const containerRef = useRef<any>(null);
   const spriteRef = useRef<any>(null);
   const shadowRef = useRef<any>(null);
@@ -64,6 +66,33 @@ export function PixiDwarf({ agent, buildingPos, textures, onAgentClick, onPositi
       const t = easeInOut(moveProgress.current);
       posRef.current.x = moveStart.current.x + (moveTarget.current.x - moveStart.current.x) * t;
       posRef.current.y = moveStart.current.y + (moveTarget.current.y - moveStart.current.y) * t;
+    }
+
+    // ── Idle wandering at campfire ─────────────────────────
+    if (agent.activity === 'idle' && moveProgress.current >= 1) {
+      wanderTimer.current += dt;
+      // Deterministic interval per agent (3-6 seconds)
+      const wanderInterval = 3 + ((agent.id.charCodeAt(0) * 7) % 30) / 10;
+      if (wanderTimer.current >= wanderInterval) {
+        wanderTimer.current = 0;
+        isWandering.current = true;
+        // Random point within ~70px of current building position
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 20 + Math.random() * 50;
+        const bx = CENTER_X + buildingPos.x + dx;
+        const by = CENTER_Y + buildingPos.y + dy;
+        moveStart.current = { ...posRef.current };
+        moveTarget.current = {
+          x: bx + Math.cos(angle) * dist,
+          y: by + Math.sin(angle) * dist,
+        };
+        moveProgress.current = 0;
+      }
+    }
+    // Reset wander when activity changes from idle
+    if (agent.activity !== 'idle' && isWandering.current) {
+      isWandering.current = false;
+      wanderTimer.current = 0;
     }
 
     const { x, y } = posRef.current;

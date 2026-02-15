@@ -21,6 +21,8 @@ export interface AgentState {
   clan?: string;
   parentId?: string;
   isSubAgent?: boolean;
+  previousActivity?: ActivityType;
+  waiting?: boolean;
   totalInputBytes: number;
   totalOutputBytes: number;
   subAgentsSpawned: number;
@@ -60,7 +62,9 @@ export interface AgentEvent {
     | 'agent:despawn'
     | 'agent:tokens'
     | 'agent:levelup'
-    | 'agent:xp';
+    | 'agent:xp'
+    | 'agent:waiting'
+    | 'agent:achievement';
   agentId: string;
   agentName?: string;
   agentRole?: string;
@@ -79,6 +83,8 @@ export interface AgentEvent {
   nextLevelXP?: number | null;
   subAgentsSpawned?: number;
   recentActivity?: { activity: string; detail: string; timestamp: number }[];
+  waiting?: boolean;
+  achievement?: string;
 }
 
 // ── Clan colors ─────────────────────────────────────────

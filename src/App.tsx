@@ -9,6 +9,7 @@ import { useSound } from './hooks/useSound'
 import { useKeyboard } from './hooks/useKeyboard'
 import { SessionStats } from './components/SessionStats'
 import { ResidentDirectory } from './components/ResidentDirectory'
+import { AchievementBanner } from './components/AchievementBanner'
 import type { AgentState, BuildingState, AgentEvent, ActivityType, Trail } from './types'
 
 const AGENT_COLORS = [
@@ -86,6 +87,12 @@ export default function App() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [activityHistory, setActivityHistory] = useState<Map<string, ActivityRecord[]>>(new Map());
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [achievements, setAchievements] = useState<Array<{
+    id: number;
+    agentName: string;
+    message: string;
+    timestamp: number;
+  }>>([]);
   const [viewMode, setViewMode] = useState<'classic' | 'pixel'>('classic');
   const agentsRef = useRef(agents);
   agentsRef.current = agents;
@@ -112,6 +119,39 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Waiting detection — if no events arrive for an agent for 15s,
+  // assume they're waiting for user input (permission prompts, etc.)
+  const lastEventTime = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setAgents(prev => {
+        let changed = false;
+        const next = new Map(prev);
+        for (const [id, agent] of next) {
+          if (agent.isSubAgent) continue;
+          const lastSeen = lastEventTime.current.get(id) || agent.spawnedAt;
+          const silent = now - lastSeen > 15_000;
+          if (silent && !agent.waiting) {
+            changed = true;
+            next.set(id, { ...agent, waiting: true });
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-cleanup expired achievements
+  useEffect(() => {
+    if (achievements.length === 0) return;
+    const timer = setTimeout(() => {
+      setAchievements(prev => prev.filter(a => Date.now() - a.timestamp < 6000));
+    }, 6500);
+    return () => clearTimeout(timer);
+  }, [achievements]);
+
   const getBuildingPosition = useCallback((buildingId: string) => {
     const building = DEFAULT_BUILDINGS.find(b => b.id === buildingId);
     return building?.position || { x: 0, y: 20 };
@@ -120,6 +160,9 @@ export default function App() {
   const handleEvent = useCallback((event: AgentEvent) => {
     setAgents(prev => {
       const next = new Map(prev);
+
+      // Track last event time for waiting detection
+      lastEventTime.current.set(event.agentId, Date.now());
 
       switch (event.type) {
         case 'agent:spawn': {
@@ -136,6 +179,7 @@ export default function App() {
             targetBuilding: 'campfire',
             previousBuilding: null,
             activity: 'idle',
+            previousActivity: undefined,
             status: 'idle',
             detail: '',
             project: event.project,
@@ -224,10 +268,13 @@ export default function App() {
             next.set(event.agentId, {
               ...agent,
               activity: event.activity,
+              previousActivity: agent.activity,
               targetBuilding: buildingId,
               previousBuilding,
               status: event.activity === 'idle' ? 'idle' : 'working',
               detail: event.detail || agent.detail,
+              // Clear waiting when agent resumes real work
+              waiting: event.activity !== 'idle' ? false : agent.waiting,
             });
             if (event.activity !== 'idle') {
               const icon = ACTIVITY_ICONS[event.activity] || '⚡';
@@ -282,6 +329,37 @@ export default function App() {
           break;
         }
 
+        case 'agent:waiting': {
+          const agent = next.get(event.agentId);
+          if (agent) {
+            next.set(event.agentId, {
+              ...agent,
+              waiting: !!event.waiting,
+            });
+            if (event.waiting) {
+              setEventLog(l => [`⏳ ${agent.name} awaits orders!`, ...l].slice(0, 30));
+            }
+          }
+          break;
+        }
+
+        case 'agent:achievement': {
+          if (event.achievement) {
+            setAchievements(prev => [
+              ...prev,
+              {
+                id: Date.now(),
+                agentName: event.agentName || event.agentId,
+                message: event.achievement!,
+                timestamp: Date.now(),
+              },
+            ]);
+            setEventLog(l => [`🏆 ${event.achievement}`, ...l].slice(0, 30));
+            sound.playAchievement();
+          }
+          break;
+        }
+
         case 'agent:complete':
         case 'agent:despawn': {
           const agent = next.get(event.agentId);
@@ -291,6 +369,7 @@ export default function App() {
             sound.playDespawn();
           }
           next.delete(event.agentId);
+          lastEventTime.current.delete(event.agentId);
           setSelectedAgentId(prev => prev === event.agentId ? null : prev);
           break;
         }
@@ -509,6 +588,9 @@ export default function App() {
           onAgentClick={setSelectedAgentId}
         />
       )}
+
+      {/* Achievement Banners */}
+      <AchievementBanner achievements={achievements} />
 
       {/* Activity Timeline */}
       <ActivityTimeline entries={timelineEntries} visible={timelineVisible} />
