@@ -81,6 +81,21 @@ HOOK_CONFIG=$(cat <<ENDJSON
     ],
     "SubagentStop": [
       { "hooks": [{ "type": "command", "command": "$HOOK_CMD", "timeout": 5 }] }
+    ],
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "$HOOK_CMD", "timeout": 5 }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "$HOOK_CMD", "timeout": 5 }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "$HOOK_CMD", "timeout": 5 }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "$HOOK_CMD", "timeout": 5 }] }
+    ],
+    "Notification": [
+      { "hooks": [{ "type": "command", "command": "$HOOK_CMD", "timeout": 5 }] }
     ]
   }
 }
@@ -93,20 +108,36 @@ if [ -f "$GLOBAL_SETTINGS" ]; then
   MERGED=$(echo "$EXISTING" | jq --argjson new "$HOOK_CONFIG" '
     # Deep merge hooks: append AgentVille entries without duplicating
     .hooks //= {} |
+    # Initialize all hook arrays
     .hooks.PreToolUse //= [] |
     .hooks.PostToolUse //= [] |
     .hooks.SubagentStart //= [] |
     .hooks.SubagentStop //= [] |
+    .hooks.SessionStart //= [] |
+    .hooks.SessionEnd //= [] |
+    .hooks.Stop //= [] |
+    .hooks.UserPromptSubmit //= [] |
+    .hooks.Notification //= [] |
     # Remove any existing agentville hooks first
     .hooks.PreToolUse |= map(select(.hooks | all(.command | test("agentville") | not))) |
     .hooks.PostToolUse |= map(select(.hooks | all(.command | test("agentville") | not))) |
     .hooks.SubagentStart |= map(select(.hooks | all(.command | test("agentville") | not))) |
     .hooks.SubagentStop |= map(select(.hooks | all(.command | test("agentville") | not))) |
+    .hooks.SessionStart |= map(select(.hooks | all(.command | test("agentville") | not))) |
+    .hooks.SessionEnd |= map(select(.hooks | all(.command | test("agentville") | not))) |
+    .hooks.Stop |= map(select(.hooks | all(.command | test("agentville") | not))) |
+    .hooks.UserPromptSubmit |= map(select(.hooks | all(.command | test("agentville") | not))) |
+    .hooks.Notification |= map(select(.hooks | all(.command | test("agentville") | not))) |
     # Then add new ones
     .hooks.PreToolUse += $new.hooks.PreToolUse |
     .hooks.PostToolUse += $new.hooks.PostToolUse |
     .hooks.SubagentStart += $new.hooks.SubagentStart |
-    .hooks.SubagentStop += $new.hooks.SubagentStop
+    .hooks.SubagentStop += $new.hooks.SubagentStop |
+    .hooks.SessionStart += $new.hooks.SessionStart |
+    .hooks.SessionEnd += $new.hooks.SessionEnd |
+    .hooks.Stop += $new.hooks.Stop |
+    .hooks.UserPromptSubmit += $new.hooks.UserPromptSubmit |
+    .hooks.Notification += $new.hooks.Notification
   ')
   echo "$MERGED" > "$GLOBAL_SETTINGS"
   echo "  Updated $GLOBAL_SETTINGS (merged with existing config)"

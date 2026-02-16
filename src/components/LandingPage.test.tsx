@@ -44,14 +44,14 @@ describe('LandingPage', () => {
     expect(screen.getByText('Get Started')).toBeInTheDocument();
     expect(screen.getByText('Clone & install')).toBeInTheDocument();
     expect(screen.getByText('Start the bridge')).toBeInTheDocument();
-    expect(screen.getByText('Connect Claude Code')).toBeInTheDocument();
+    expect(screen.getByText('Connect all sessions globally')).toBeInTheDocument();
     expect(screen.getByText('Start coding!')).toBeInTheDocument();
   });
 
   it('should render code blocks in steps', () => {
     render(<LandingPage connected={false} onDemo={vi.fn()} />);
     expect(screen.getByText('npm run bridge')).toBeInTheDocument();
-    expect(screen.getByText('npm run connect')).toBeInTheDocument();
+    expect(screen.getByText('npm run connect:global')).toBeInTheDocument();
   });
 
   it('should call onDemo when Try Demo button is clicked', () => {
