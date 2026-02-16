@@ -41,6 +41,21 @@ HOOK_CONFIG='{
     ],
     "SubagentStop": [
       { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agentville-hook.sh", "timeout": 5 }] }
+    ],
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agentville-hook.sh", "timeout": 5 }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agentville-hook.sh", "timeout": 5 }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agentville-hook.sh", "timeout": 5 }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agentville-hook.sh", "timeout": 5 }] }
+    ],
+    "Notification": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agentville-hook.sh", "timeout": 5 }] }
     ]
   }
 }'

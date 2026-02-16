@@ -338,14 +338,14 @@ export function LandingPage({ connected, onDemo }: LandingPageProps) {
             />
             <Step
               n={3}
-              title="Connect Claude Code"
-              code="npm run connect"
-              note="This installs the hooks into your project's .claude/ config"
+              title="Connect all sessions globally"
+              code="npm run connect:global"
+              note="Every Claude Code session on your machine will appear in the village"
             />
             <Step
               n={4}
               title="Start coding!"
-              note="Open Claude Code in any connected project — agents appear automatically"
+              note="Open Claude Code in any project — agents appear automatically"
               last
             />
           </div>
