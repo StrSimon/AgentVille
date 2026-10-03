@@ -1,0 +1,4 @@
+tree-pine|a single tall pine tree with layered dark green needles and a sturdy trunk
+tree-oak|a single round leafy oak tree with a lush full crown and thick trunk
+bush|a small rounded flowering bush with a few pink and yellow blossoms
+rock|a mossy grey boulder cluster

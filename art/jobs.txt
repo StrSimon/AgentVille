@@ -1,0 +1,15 @@
+townhall|a dwarven town hall: stone ground floor and half-timbered upper floor, red clay tile gable roof, a square stone clock tower with a golden clock face rising from the roof, wide stone steps to a heavy wooden double door, red banners with a gold hammer emblem, two wooden benches in front
+forge|a dwarven blacksmith forge: dark stone walls, open front with a roaring orange furnace, a tall stone chimney with a little smoke, an anvil and a quench barrel outside, tool racks, slate roof
+arena|a small round dwarven training arena: circular stone wall with arches and red pennants on poles, sand floor inside with a wooden training dummy, a few torches
+library|a tall dwarven library: three-storey grey stone building with many tall arched windows, dark blue slate roof with small turrets, blue banners, carved stone entrance
+scriptorium|a slender dwarven scriptorium tower: plastered stone tower with timber details, a steep purple-magenta pointed roof, one window glowing warmly, a quill-and-scroll sign
+guild|a dwarven architects guild hall: sturdy stone hall with a deep blue hip roof, large drafting windows, a small side tower, blue banner with a compass emblem, a map table in front
+apothecary|a small dwarven apothecary hut: timber walls, mossy green roof, hanging herbs, shelves of glowing potion bottles, a bubbling green cauldron outside
+observatory|a small dwarven observatory: round stone base with a copper-blue dome that has an open slit, a brass telescope pointing out, tiny stair
+tower|a tall dwarven stone watchtower: square crenellated tower with a wooden lookout top, a brazier with fire on top, a yellow flag
+post|a dwarven raven post office: cozy timber house with an orange tile roof, a red mailbox, a stack of parcels and a handcart, a black raven perched on the roof ridge
+mine|a dwarven mine entrance cut into a rocky outcrop: wooden support beams around a dark tunnel, mine cart rails coming out with a cart full of glittering ore, lanterns
+gate|a magical dwarven sky gate: two carved stone pillars and a lintel framing a swirling violet portal, runes glowing faintly, steps leading up
+well|a small stone well of memories: round stone well with a wooden roof on two posts, bucket and rope, faintly glowing cyan water
+tavern|a cozy dwarven tavern: two-storey half-timbered building with warm glowing windows, red tile roof, smoking chimney, a hanging sign with a beer mug, barrels by the door
+campfire|a dwarven campfire circle: a ring of stones around a crackling log fire, four log benches around it, on a small patch of cobblestones

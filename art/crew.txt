@@ -1,0 +1,12 @@
+sheet-claude-b|a stout dwarf warrior with a jet-black braided beard, winged silver helmet, terracotta-orange tunic over chainmail and a battle axe on his back
+sheet-claude-c|an old dwarf elder with a long snow-white beard, a bronze circlet helmet, a terracotta-orange robe with gold embroidery and a carved walking staff
+sheet-codex-b|a young tinkerer dwarf with a fiery red short beard, brass goggles on a deep teal-green hood, a leather apron full of tools and a big wrench
+sheet-codex-c|a mysterious dwarf mage with a dark brown beard, a deep teal-green hooded cloak with white fur trim and a staff topped with a glowing green crystal
+sheet-claude-apprentice|a small young dwarf apprentice with a short stubbly auburn beard, a simple leather cap with tiny horns, a terracotta-orange vest, a big backpack and a spyglass
+sheet-codex-apprentice|a small young dwarf apprentice with a short grey beard, a small teal-green hood, a big backpack with scrolls and a lantern
+portrait-claude-a|a stout dwarf with a long braided auburn beard, bronze horned helmet and terracotta-orange tunic over chainmail
+portrait-claude-b|a dwarf warrior with a jet-black braided beard and a winged silver helmet, terracotta-orange tunic over chainmail
+portrait-claude-c|an old dwarf elder with a long snow-white beard, a bronze circlet helmet and a terracotta-orange embroidered robe
+portrait-codex-a|a dwarf with a long grey-white beard in a deep teal-green hooded cloak with white fur trim, holding a lantern
+portrait-codex-b|a young tinkerer dwarf with a short fiery red beard, brass goggles on a teal-green hood and a leather tool apron
+portrait-codex-c|a dwarf mage with a dark brown beard in a deep teal-green hooded fur-trimmed cloak, green crystal light on his face

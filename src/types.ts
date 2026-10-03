@@ -1,129 +1,189 @@
-export type ActivityType =
-  | 'planning'
-  | 'coding'
-  | 'testing'
-  | 'researching'
-  | 'reviewing'
-  | 'idle';
+// Shapes sent by the bridge (see server/core/profiles.mjs + village.mjs).
 
-export interface AgentState {
-  id: string;
-  name: string;
-  role: string;
-  color: string;
-  position: { x: number; y: number };
-  targetBuilding: string | null;
-  previousBuilding: string | null;
-  activity: ActivityType;
-  status: 'idle' | 'moving' | 'working';
+export const ACTIVITIES = [
+  'planning', 'delegating', 'coding', 'writing', 'testing', 'debugging', 'researching',
+  'browsing', 'reviewing', 'committing', 'installing', 'deploying', 'waiting', 'remembering', 'idle',
+] as const;
+export type Activity = (typeof ACTIVITIES)[number];
+
+export type Source = 'claude' | 'codex' | 'custom';
+
+export interface Attention {
+  kind: 'permission' | 'question' | 'done';
+  since: number;
+  text?: string;
+  tool?: string;
+  requestId?: string;
+  terminal?: boolean;
+  leashed?: boolean;
+}
+
+export interface ModelUsage {
+  model: string;
+  label: string;
+  cost: number;
+  tokens: number;
+}
+
+export interface ActivityRecord {
+  activity: Activity;
   detail: string;
-  project?: string;
-  clan?: string;
-  parentId?: string;
-  isSubAgent?: boolean;
-  previousActivity?: ActivityType;
-  waiting?: boolean;
-  failure?: string;
-  offline?: boolean;
-  totalInputBytes: number;
-  totalOutputBytes: number;
-  subAgentsSpawned: number;
-  spawnedAt: number;
-  level: number;
-  title: string;
-  xp: number;
-  nextLevelXP: number | null;
+  timestamp: number;
 }
 
-export interface BuildingState {
+export interface Agent {
   id: string;
   name: string;
-  type: ActivityType;
-  position: { x: number; y: number };
-  color: string;
-  glowColor: string;
-  icon: string;
-  activeAgents: string[];
+  source: Source;
+  kind: 'main' | 'sub';
+  parentId: string | null;
+  agentType: string | null;
+  project: string | null;
+  model: string | null;
+  modelLabel: string | null;
+  online: boolean;
+  busy: boolean;
+  activity: Activity;
+  detail: string;
+  attention: Attention | null;
+  leash: boolean;
+  orders: number;
+  failure: { text: string; at: number } | null;
+  xp: number;
   level: number;
   title: string;
-  xp: number;
+  levelXP: number;
   nextLevelXP: number | null;
-  toolCalls?: number;
-  uniqueVisitors?: number;
+  nextTitle: string | null;
+  toolCalls: number;
+  sessions: number;
+  subAgentsSpawned: number;
+  cost: number;
+  tokens: number;
+  bytesIn: number;
+  bytesOut: number;
+  models: ModelUsage[];
+  activityCounts: Partial<Record<Activity, number>>;
+  recentActivity: ActivityRecord[];
+  firstSeen: number;
+  lastSeen: number;
 }
 
-export interface Trail {
+export interface BuildingStats {
   id: string;
-  fromPos: { x: number; y: number };
-  toPos: { x: number; y: number };
-  color: string;
-  createdAt: number;
+  xp: number;
+  level: number;
+  title: string;
+  levelXP: number;
+  nextLevelXP: number | null;
+  toolCalls: number;
+  visitors: number;
+  visits: number;
+  lastActivity: number | null;
 }
 
-export interface AgentEvent {
-  type:
-    | 'agent:spawn'
-    | 'agent:move'
-    | 'agent:work'
-    | 'agent:communicate'
-    | 'agent:complete'
-    | 'agent:despawn'
-    | 'agent:tokens'
-    | 'agent:levelup'
-    | 'agent:xp'
-    | 'agent:waiting'
-    | 'agent:achievement'
-    | 'agent:failure'
-    | 'building:xp'
-    | 'building:state';
+export interface Question {
+  question: string;
+  header?: string;
+  multiSelect?: boolean;
+  options?: Array<{ label: string; description?: string }>;
+}
+
+export interface PendingRequest {
+  id: string;
   agentId: string;
-  agentName?: string;
-  agentRole?: string;
-  activity?: ActivityType;
-  targetBuilding?: string;
-  targetAgent?: string;
-  detail?: string;
+  kind: 'permission' | 'question' | 'orders';
+  source: Source;
+  name: string;
   project?: string;
-  clan?: string;
-  parentId?: string;
-  totalInputBytes?: number;
-  totalOutputBytes?: number;
+  tool?: string;
+  detail?: string;
+  command?: string;
+  questions?: Question[];
+  createdAt: number;
+  deadline: number;
+}
+
+export interface LimitWindow {
+  usedPercent: number;
+  windowMinutes: number | null;
+  resetsAt: number | null;
+}
+
+export interface PlanLimits {
+  plan: string | null;
+  windows: LimitWindow[];
+  credits: { balance: number | null; unlimited: boolean } | null;
+  spend?: { usedPercent: number; usedUsd: number | null; limitUsd: number | null; period: string | null; resetsAt: number | null } | null;
+  reached: string | null;
+  updatedAt?: number;
+}
+
+export interface SourceTotals { cost: number; tokens: number; toolCalls: number; dwarves?: number }
+
+export interface BurnHour { hour: number; cost: number; tokens: number; bySource: Partial<Record<Source, number>> }
+
+export interface Stats {
+  bySource: Record<string, SourceTotals>;
+  days: Array<{ day: string } & Partial<Record<Source, SourceTotals>>>;
+  projects: Array<{ name: string } & Partial<Record<Source, SourceTotals>>>;
+  models: Array<{ model: string; label: string; source: Source; cost: number; tokens: number }>;
+  today: Partial<Record<Source, SourceTotals>>;
+  burn: {
+    hours: BurnHour[];
+    last24: { cost: number; tokens: number; bySource: Partial<Record<Source, { cost: number; tokens: number }>> };
+    perHour: number;
+    projected24h: number;
+  };
+  limits: Partial<Record<Source, PlanLimits>>;
+}
+
+export interface Settings {
+  approvalMode: 'both' | 'village' | 'terminal';
+  approvalWaitSec: number;
+  ordersMode: 'auto' | 'leash' | 'off';
+  codexHold: boolean;
+  leashWaitMin: number;
+  mainTimeoutMin: number;
+  subTimeoutMin: number;
+}
+
+export type FxKind = 'spawn' | 'despawn' | 'activity' | 'failure' | 'level' | 'building-level'
+  | 'achievement' | 'order' | 'order-delivered' | 'decision' | 'warning';
+
+export interface FxEvent {
+  type: 'fx';
+  kind: FxKind;
+  ts: number;
+  agentId?: string;
+  name?: string;
+  text?: string;
+  activity?: Activity;
+  detail?: string;
   level?: number;
   title?: string;
-  xp?: number;
-  nextLevelXP?: number | null;
-  subAgentsSpawned?: number;
-  recentActivity?: { activity: string; detail: string; timestamp: number }[];
-  waiting?: boolean;
-  achievement?: string;
-  offline?: boolean;
   buildingId?: string;
-  toolCalls?: number;
-  uniqueVisitors?: number;
+  source?: Source;
+  parentId?: string | null;
+  severity?: 'high' | 'critical';
 }
 
-// ── Clan colors ─────────────────────────────────────────
-// Distinct, earthy/fantasy palette for clan badges.
-// Deterministic: same clan name always gets the same color.
-const CLAN_COLORS = [
-  '#c2884d', // bronze
-  '#5b8a72', // forest
-  '#8b6cc1', // amethyst
-  '#c75d5d', // garnet
-  '#4a90b8', // steel blue
-  '#b8943a', // gold
-  '#6b8e5a', // moss
-  '#a85882', // rose quartz
-  '#5c7fa8', // slate
-  '#d49a5a', // copper
-  '#7a6e5d', // stone
-  '#9c6b4e', // clay
-];
-
-export function getClanColor(clan: string): string {
-  let hash = 0;
-  for (let i = 0; i < clan.length; i++) {
-    hash = ((hash << 5) - hash + clan.charCodeAt(i)) | 0;
-  }
-  return CLAN_COLORS[Math.abs(hash) % CLAN_COLORS.length];
+export interface Snapshot {
+  type: 'snapshot';
+  agents: Agent[];
+  buildings: BuildingStats[];
+  requests: PendingRequest[];
+  stats: Stats;
+  settings: Settings;
 }
+
+export type ServerMessage =
+  | Snapshot
+  | { type: 'agent'; agent: Agent }
+  | { type: 'building'; building: BuildingStats }
+  | { type: 'request'; request: PendingRequest }
+  | { type: 'request:closed'; id: string; agentId: string; reason: string }
+  | { type: 'stats'; stats: Stats }
+  | { type: 'limits'; limits: Partial<Record<Source, PlanLimits>> }
+  | { type: 'settings'; settings: Settings }
+  | FxEvent;

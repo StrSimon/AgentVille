@@ -1,0 +1,490 @@
+{
+  "apothecary-t2": {
+    "width": 640,
+    "height": 655
+  },
+  "apothecary-t2-glow": {
+    "width": 640,
+    "height": 655
+  },
+  "apothecary-t3": {
+    "width": 640,
+    "height": 647
+  },
+  "apothecary-t3-glow": {
+    "width": 640,
+    "height": 647
+  },
+  "apothecary": {
+    "width": 640,
+    "height": 666
+  },
+  "apothecary-glow": {
+    "width": 640,
+    "height": 666
+  },
+  "arena-t2": {
+    "width": 640,
+    "height": 638
+  },
+  "arena-t2-glow": {
+    "width": 640,
+    "height": 638
+  },
+  "arena-t3": {
+    "width": 640,
+    "height": 637
+  },
+  "arena-t3-glow": {
+    "width": 640,
+    "height": 637
+  },
+  "arena": {
+    "width": 640,
+    "height": 602
+  },
+  "arena-glow": {
+    "width": 640,
+    "height": 602
+  },
+  "bench": {
+    "width": 280,
+    "height": 259
+  },
+  "bush": {
+    "width": 280,
+    "height": 275
+  },
+  "campfire-t2": {
+    "width": 640,
+    "height": 616
+  },
+  "campfire-t2-glow": {
+    "width": 640,
+    "height": 616
+  },
+  "campfire-t3": {
+    "width": 640,
+    "height": 640
+  },
+  "campfire-t3-glow": {
+    "width": 640,
+    "height": 640
+  },
+  "campfire": {
+    "width": 640,
+    "height": 453
+  },
+  "campfire-glow": {
+    "width": 640,
+    "height": 453
+  },
+  "dwarf-claude-sit": {
+    "width": 240,
+    "height": 353
+  },
+  "dwarf-claude-stand": {
+    "width": 240,
+    "height": 293
+  },
+  "dwarf-claude-walk": {
+    "width": 240,
+    "height": 344
+  },
+  "dwarf-codex-sit": {
+    "width": 240,
+    "height": 222
+  },
+  "dwarf-codex-stand": {
+    "width": 240,
+    "height": 313
+  },
+  "dwarf-codex-walk": {
+    "width": 240,
+    "height": 273
+  },
+  "forge-t2": {
+    "width": 640,
+    "height": 656
+  },
+  "forge-t2-glow": {
+    "width": 640,
+    "height": 656
+  },
+  "forge-t3": {
+    "width": 640,
+    "height": 648
+  },
+  "forge-t3-glow": {
+    "width": 640,
+    "height": 648
+  },
+  "forge": {
+    "width": 640,
+    "height": 669
+  },
+  "forge-glow": {
+    "width": 640,
+    "height": 669
+  },
+  "gate-t2": {
+    "width": 640,
+    "height": 643
+  },
+  "gate-t2-glow": {
+    "width": 640,
+    "height": 643
+  },
+  "gate-t3": {
+    "width": 640,
+    "height": 669
+  },
+  "gate-t3-glow": {
+    "width": 640,
+    "height": 669
+  },
+  "gate": {
+    "width": 640,
+    "height": 626
+  },
+  "gate-glow": {
+    "width": 640,
+    "height": 626
+  },
+  "ground-cobble": {
+    "width": 512,
+    "height": 512
+  },
+  "ground-grass": {
+    "width": 512,
+    "height": 512
+  },
+  "guild-t2": {
+    "width": 640,
+    "height": 644
+  },
+  "guild-t2-glow": {
+    "width": 640,
+    "height": 644
+  },
+  "guild-t3": {
+    "width": 640,
+    "height": 643
+  },
+  "guild-t3-glow": {
+    "width": 640,
+    "height": 643
+  },
+  "guild": {
+    "width": 640,
+    "height": 655
+  },
+  "guild-glow": {
+    "width": 640,
+    "height": 655
+  },
+  "library-t2": {
+    "width": 640,
+    "height": 641
+  },
+  "library-t2-glow": {
+    "width": 640,
+    "height": 641
+  },
+  "library-t3": {
+    "width": 640,
+    "height": 636
+  },
+  "library-t3-glow": {
+    "width": 640,
+    "height": 636
+  },
+  "library": {
+    "width": 640,
+    "height": 666
+  },
+  "library-glow": {
+    "width": 640,
+    "height": 666
+  },
+  "mine-t2": {
+    "width": 640,
+    "height": 641
+  },
+  "mine-t2-glow": {
+    "width": 640,
+    "height": 641
+  },
+  "mine-t3": {
+    "width": 640,
+    "height": 641
+  },
+  "mine-t3-glow": {
+    "width": 640,
+    "height": 641
+  },
+  "mine": {
+    "width": 640,
+    "height": 597
+  },
+  "mine-glow": {
+    "width": 640,
+    "height": 597
+  },
+  "mountains": {
+    "width": 900,
+    "height": 833
+  },
+  "observatory-t2": {
+    "width": 640,
+    "height": 637
+  },
+  "observatory-t2-glow": {
+    "width": 640,
+    "height": 637
+  },
+  "observatory-t3": {
+    "width": 640,
+    "height": 653
+  },
+  "observatory-t3-glow": {
+    "width": 640,
+    "height": 653
+  },
+  "observatory": {
+    "width": 640,
+    "height": 641
+  },
+  "observatory-glow": {
+    "width": 640,
+    "height": 641
+  },
+  "post-t2": {
+    "width": 640,
+    "height": 649
+  },
+  "post-t2-glow": {
+    "width": 640,
+    "height": 649
+  },
+  "post-t3": {
+    "width": 640,
+    "height": 671
+  },
+  "post-t3-glow": {
+    "width": 640,
+    "height": 671
+  },
+  "post": {
+    "width": 640,
+    "height": 655
+  },
+  "post-glow": {
+    "width": 640,
+    "height": 655
+  },
+  "rock": {
+    "width": 280,
+    "height": 247
+  },
+  "scriptorium-t2": {
+    "width": 640,
+    "height": 857
+  },
+  "scriptorium-t2-glow": {
+    "width": 640,
+    "height": 857
+  },
+  "scriptorium-t3": {
+    "width": 640,
+    "height": 874
+  },
+  "scriptorium-t3-glow": {
+    "width": 640,
+    "height": 874
+  },
+  "scriptorium": {
+    "width": 640,
+    "height": 1030
+  },
+  "scriptorium-glow": {
+    "width": 640,
+    "height": 1030
+  },
+  "dwarf-claude-apprentice-stand": {
+    "width": 240,
+    "height": 368
+  },
+  "dwarf-claude-apprentice-walk": {
+    "width": 240,
+    "height": 341
+  },
+  "dwarf-claude-apprentice-sit": {
+    "width": 240,
+    "height": 240
+  },
+  "dwarf-claude-b-stand": {
+    "width": 240,
+    "height": 382
+  },
+  "dwarf-claude-b-walk": {
+    "width": 240,
+    "height": 360
+  },
+  "dwarf-claude-b-sit": {
+    "width": 240,
+    "height": 280
+  },
+  "dwarf-claude-c-stand": {
+    "width": 240,
+    "height": 392
+  },
+  "dwarf-claude-c-walk": {
+    "width": 240,
+    "height": 305
+  },
+  "dwarf-claude-c-sit": {
+    "width": 240,
+    "height": 335
+  },
+  "dwarf-codex-apprentice-stand": {
+    "width": 240,
+    "height": 342
+  },
+  "dwarf-codex-apprentice-walk": {
+    "width": 240,
+    "height": 309
+  },
+  "dwarf-codex-apprentice-sit": {
+    "width": 240,
+    "height": 256
+  },
+  "dwarf-codex-b-stand": {
+    "width": 240,
+    "height": 407
+  },
+  "dwarf-codex-b-walk": {
+    "width": 240,
+    "height": 364
+  },
+  "dwarf-codex-b-sit": {
+    "width": 240,
+    "height": 276
+  },
+  "dwarf-codex-c-stand": {
+    "width": 240,
+    "height": 388
+  },
+  "dwarf-codex-c-walk": {
+    "width": 240,
+    "height": 285
+  },
+  "dwarf-codex-c-sit": {
+    "width": 240,
+    "height": 345
+  },
+  "tavern-t2": {
+    "width": 640,
+    "height": 658
+  },
+  "tavern-t2-glow": {
+    "width": 640,
+    "height": 658
+  },
+  "tavern-t3": {
+    "width": 640,
+    "height": 677
+  },
+  "tavern-t3-glow": {
+    "width": 640,
+    "height": 677
+  },
+  "tavern": {
+    "width": 640,
+    "height": 663
+  },
+  "tavern-glow": {
+    "width": 640,
+    "height": 663
+  },
+  "tower-t2": {
+    "width": 640,
+    "height": 884
+  },
+  "tower-t2-glow": {
+    "width": 640,
+    "height": 884
+  },
+  "tower-t3": {
+    "width": 640,
+    "height": 917
+  },
+  "tower-t3-glow": {
+    "width": 640,
+    "height": 917
+  },
+  "tower": {
+    "width": 640,
+    "height": 1001
+  },
+  "tower-glow": {
+    "width": 640,
+    "height": 1001
+  },
+  "townhall-t2": {
+    "width": 640,
+    "height": 697
+  },
+  "townhall-t2-glow": {
+    "width": 640,
+    "height": 697
+  },
+  "townhall-t3": {
+    "width": 640,
+    "height": 683
+  },
+  "townhall-t3-glow": {
+    "width": 640,
+    "height": 683
+  },
+  "townhall": {
+    "width": 640,
+    "height": 710
+  },
+  "townhall-glow": {
+    "width": 640,
+    "height": 710
+  },
+  "tree-oak": {
+    "width": 280,
+    "height": 271
+  },
+  "tree-pine": {
+    "width": 280,
+    "height": 492
+  },
+  "well-t2": {
+    "width": 640,
+    "height": 733
+  },
+  "well-t2-glow": {
+    "width": 640,
+    "height": 733
+  },
+  "well-t3": {
+    "width": 640,
+    "height": 737
+  },
+  "well-t3-glow": {
+    "width": 640,
+    "height": 737
+  },
+  "well": {
+    "width": 640,
+    "height": 791
+  },
+  "well-glow": {
+    "width": 640,
+    "height": 791
+  }
+}
