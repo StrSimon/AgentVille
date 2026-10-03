@@ -46,7 +46,7 @@ export const DEMO_SESSIONS: DemoSession[] = [
       ...work(4),
       t('PreToolUse', 'Agent', { description: 'Map the checkout flow', subagent_type: 'Explore' }, 800),
       { event: 'SubagentStart', agent: { id: 'x1', type: 'Explore' }, wait: 1200 },
-      ...work(3, { id: 'x1', type: 'Explore' }),
+      ...work(6, { id: 'x1', type: 'Explore' }),
       { event: 'SubagentStop', agent: { id: 'x1', type: 'Explore' }, wait: 800 },
       ...work(3),
       t('PermissionRequest', 'Bash', { command: 'git push origin feature/checkout' }, 2000),

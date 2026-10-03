@@ -35,6 +35,8 @@ export class DwarfView {
   private builtLevel: number;
   private builtSource: string;
   hovered = false;
+  /** number of online sub-agents following this dwarf */
+  crew = 0;
 
   constructor(public agent: Agent, start: Pt, onSelect: (id: string) => void) {
     this.seed = hash(agent.id);
@@ -267,7 +269,7 @@ export class DwarfView {
     const showTag = a.online || this.hovered || selected;
     this.tag.visible = this.tagBg.visible = showTag;
     if (showTag) {
-      const text = `${a.name} · ${a.level}`;
+      const text = `${a.name} · ${a.level}${this.crew ? ` · ${this.crew} helper${this.crew > 1 ? 's' : ''}` : ''}${a.kind === 'sub' && a.agentType ? ` · ${a.agentType}` : ''}`;
       if (this.tag.text !== text) this.tag.text = text;
       this.tag.position.set(0, 6 / scale);
       const w = this.tag.width + 16;

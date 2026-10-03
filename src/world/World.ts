@@ -42,6 +42,7 @@ export class World {
   private shadows = new ShadowLayer();
   private clouds = new Clouds();
   private grade = new LightGrade();
+  private tethers = new Graphics();
   private lanterns: Array<{ x: number; y: number }> = [];
   private selected: string | null = null;
   private timeMode: TimeMode = 'auto';
@@ -70,7 +71,7 @@ export class World {
     const paths = pathTiles();
     this.world.addChild(buildGround(paths));
     this.water = buildWater();
-    this.world.addChild(this.water, this.shadows.container, this.clouds.ground, this.entities, this.particles.container, this.clouds.sky);
+    this.world.addChild(this.water, this.shadows.container, this.clouds.ground, this.entities, this.tethers, this.particles.container, this.clouds.sky);
 
     for (const def of BUILDINGS) {
       const view = new BuildingView(def, () => this.onBuildingRebuilt());
@@ -275,6 +276,7 @@ export class World {
       view.active = active.get(id) || 0;
       view.update(dt, t, this.particles, id === 'townhall' && this.alert, this.camera.zoom, this.nightK);
     }
+    this.drawTethers(t, this.camera.zoom);
     this.lights.update(t, this.nightK);
     this.water.alpha = 0.35 + Math.sin(t * 1.7) * 0.25;
     if (this.nightK > 0.4 && this.trees.length && Math.random() < dt * 3) {
@@ -282,6 +284,36 @@ export class World {
       this.particles.emit('firefly', tree.x + (Math.random() - 0.5) * 40, tree.y - 20 - Math.random() * 30);
     }
     this.particles.update(dt);
+  }
+
+  /** Glowing leash from every online sub-agent to its parent, with data motes flowing along it. */
+  private drawTethers(t: number, zoom: number): void {
+    const g = this.tethers.clear();
+    const k = 1 / Math.max(0.55, Math.min(zoom, 1.4));
+    const crew = new Map<string, number>();
+    for (const v of this.dwarves.values()) {
+      const a = v.agent;
+      if (!a.online || a.kind !== 'sub' || !a.parentId) continue;
+      const parent = this.dwarves.get(a.parentId);
+      if (!parent?.agent.online) continue;
+      crew.set(a.parentId, (crew.get(a.parentId) || 0) + 1);
+      const from = { x: parent.pos.x, y: parent.pos.y - 30 }, to = { x: v.pos.x, y: v.pos.y - 24 };
+      const mid = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 40 - Math.hypot(to.x - from.x, to.y - from.y) * 0.15 };
+      const color = a.source === 'codex' ? 0x34d399 : a.source === 'claude' ? 0xf0915f : 0x93c5fd;
+      const bez = (k: number) => ({
+        x: (1 - k) ** 2 * from.x + 2 * (1 - k) * k * mid.x + k ** 2 * to.x,
+        y: (1 - k) ** 2 * from.y + 2 * (1 - k) * k * mid.y + k ** 2 * to.y,
+      });
+      g.moveTo(from.x, from.y).quadraticCurveTo(mid.x, mid.y, to.x, to.y).stroke({ width: 11 * k, color, alpha: 0.22 });
+      g.moveTo(from.x, from.y).quadraticCurveTo(mid.x, mid.y, to.x, to.y).stroke({ width: 3 * k, color, alpha: 0.95 });
+      g.moveTo(from.x, from.y).quadraticCurveTo(mid.x, mid.y, to.x, to.y).stroke({ width: 1 * k, color: 0xffffff, alpha: 0.55 });
+      for (const end of [from, to]) g.circle(end.x, end.y, 3.5 * k).fill(color).stroke({ width: 1.2 * k, color: 0xffffff, alpha: 0.8 });
+      for (let m = 0; m < 3; m++) {
+        const p = bez(((t * 0.45 + m / 3) % 1));
+        g.circle(p.x, p.y, 7 * k).fill({ color, alpha: 0.35 }).circle(p.x, p.y, 3.2 * k).fill({ color: 0xffffff, alpha: 0.95 });
+      }
+    }
+    for (const v of this.dwarves.values()) v.crew = crew.get(v.agent.id) || 0;
   }
 
   destroy(): void {

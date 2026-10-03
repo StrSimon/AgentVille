@@ -24,7 +24,7 @@ export function OrderBox({ agent, compact = false }: { agent: Agent; compact?: b
   const hint = leashed
     ? done ? 'Waiting in the village — orders start it right away.' : 'Will wait in the village for orders after this task.'
     : agent.busy ? 'Delivered with its next tool call.'
-      : 'Turn on “Wait for orders” to command this dwarf from here.';
+      : 'Idle in its terminal — orders wait until it acts again. Turn on “Wait for orders” to command it from here.';
 
   return (
     <div className={compact ? 'mt-2.5' : 'mt-1'}>
@@ -42,7 +42,7 @@ export function OrderBox({ agent, compact = false }: { agent: Agent; compact?: b
         </button>
       </form>
       <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span className="text-[10.5px] text-muted">{sent ? '✓ Orders sent' : hint}</span>
+        <span className="text-[10.5px] text-muted">{sent ? (deliverable ? '✓ Orders sent' : '✓ Queued — delivered on its next action') : hint}</span>
         <button
           type="button"
           onClick={() => controller.setLeash(agent.id, !leashed)}
