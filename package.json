@@ -1,6 +1,6 @@
 {
   "name": "agent-ville",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Watch your Claude Code and Codex agents live as dwarves in an isometric village — approve requests, send orders, track costs.",
   "keywords": [
     "claude-code",

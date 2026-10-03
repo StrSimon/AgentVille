@@ -7,6 +7,8 @@ import { dwarfLook } from '../lib/variant';
 import { hash, type Pt } from './iso';
 import { SOURCE_COLOR } from './layout';
 import { bored, clock, needs, speak, story } from './phrases';
+import type { Particles } from './particles';
+import { activityColor, emitWork, SWING, WorkBadge } from './work-fx';
 
 const FONT = 'Geist Variable, system-ui, sans-serif';
 type Pose = 'walk' | 'work' | 'alert' | 'bored' | 'idle' | 'sleep';
@@ -36,9 +38,16 @@ export class DwarfView {
   private markerBg = new Graphics();
   private markerTimer = label(11, '700');
   private nextChatter = 0;
+  private badge = new WorkBadge();
+  /** 1 → 0 hop after each tool call, so every action is visible */
+  private pop = 0;
+  private lastSwing = 0;
+  private baseScale = 1;
   private builtLevel: number;
   private builtSource: string;
   hovered = false;
+  /** another dwarf at the same building already shows the activity label */
+  badgeCompact = false;
   /** number of online sub-agents following this dwarf */
   crew = 0;
 
@@ -62,7 +71,7 @@ export class DwarfView {
     this.markerTimer.style.stroke = { color: 0x0b1020, width: 3.5, join: 'round' };
     this.markerTimer.position.set(0, 12);
     this.marker.addChild(this.markerBg, bang, this.markerTimer);
-    this.overlay.addChild(this.tagBg, this.tag, this.bubble, this.marker);
+    this.overlay.addChild(this.tagBg, this.tag, this.badge.container, this.bubble, this.marker);
     this.overlay.eventMode = 'none';
     this.bubble.visible = false;
     this.marker.visible = false;
@@ -71,9 +80,11 @@ export class DwarfView {
   /** Painted sprite when the clan's art exists, otherwise the procedural dwarf. */
   private build(agent: Agent): DwarfParts | PaintedParts {
     const textures = paintedTextures(this.sprites, dwarfLook(agent));
-    return textures
+    const parts = textures
       ? buildPaintedDwarf(textures, agent.source, false)
       : buildDwarf(agent.id, agent.source, agent.level, agent.kind === 'sub');
+    this.baseScale = parts.root.scale.y;
+    return parts;
   }
 
   private wire(onSelect: (id: string) => void): void {
@@ -103,6 +114,7 @@ export class DwarfView {
     }
     if (agent.detail !== prev.detail || agent.activity !== prev.activity) {
       if (agent.online && agent.activity !== 'idle' && agent.activity !== 'waiting') {
+        this.pop = 1;
         this.say(speak(agent.activity, agent.detail, hash(agent.detail) + this.seed), 4500);
       }
     }
@@ -112,6 +124,11 @@ export class DwarfView {
 
   walkTo(route: Pt[]): void {
     this.route = route;
+  }
+
+  /** Online and standing at its spot (not walking through the village). */
+  get settled(): boolean {
+    return this.agent.online && this.route.length === 0;
   }
 
   get destination(): Pt {
@@ -170,6 +187,8 @@ export class DwarfView {
       moving = true;
     }
     p.root.position.set(this.pos.x, this.pos.y);
+    // zoomed out, dwarves grow so you can still see them work
+    p.root.scale.set(this.baseScale * Math.min(1.8, Math.max(1, 0.9 / zoom)));
     p.root.zIndex = this.pos.y;
 
     const attention = a.online ? a.attention : null;
@@ -180,11 +199,18 @@ export class DwarfView {
             : a.activity === 'idle' ? 'idle' : 'work';
 
     this.animate(t, now);
+    this.pop = Math.max(0, this.pop - dt * 2.5);
+    p.body.y -= Math.sin(this.pop * Math.PI) * 6;
     p.root.alpha += ((a.online ? 1 : 0.62) - p.root.alpha) * Math.min(1, dt * 4);
 
     // ground ring: red pulse when blocked, amber when selected, soft when bored
     p.ring.clear();
-    if (this.pose === 'alert') {
+    if (this.pose === 'work') {
+      const color = activityColor(a.activity);
+      const k = (t * 0.8 + (this.seed % 10) / 10) % 1;
+      p.ring.ellipse(0, 0, 13, 6.5).fill({ color, alpha: 0.28 + this.pop * 0.3 });
+      p.ring.ellipse(0, 0, 11 + k * 12, (11 + k * 12) / 2).stroke({ width: 2, color, alpha: 0.75 * (1 - k) });
+    } else if (this.pose === 'alert') {
       const k = (t * 1.4) % 1;
       p.ring.ellipse(0, 0, 12 + k * 16, (12 + k * 16) / 2).stroke({ width: 2.5, color: 0xfb4f6b, alpha: 1 - k });
       p.ring.ellipse(0, 0, 11, 5.5).fill({ color: 0xfb4f6b, alpha: 0.35 });
@@ -194,6 +220,19 @@ export class DwarfView {
     if (selected) p.ring.ellipse(0, 0, 15, 7.5).stroke({ width: 2, color: 0xf59e0b, alpha: 0.95 });
 
     this.updateOverlay(t, now, zoom, selected, attention, spotlight);
+  }
+
+  /** Work effects at the dwarf's hands, bursting on each tool strike. */
+  emitWork(dt: number, t: number, particles: Particles): void {
+    if (this.pose !== 'work') return;
+    const act = this.agent.activity;
+    const speed = !('sprite' in this.parts) && act === 'testing' ? 12 : 9;
+    const swing = Math.sin(t * speed + (this.seed % 100));
+    const strike = SWING.has(act) && this.lastSwing > 0 && swing <= 0;
+    this.lastSwing = swing;
+    const scale = this.parts.root.scale.y;
+    emitWork(particles, act, this.pos.x + this.facing * 9 * scale, this.pos.y - 22 * scale, dt, strike);
+    if (this.pop > 0.95) particles.emit('mote', this.pos.x, this.pos.y - 30 * scale, 5, activityColor(act));
   }
 
   private animate(t: number, now: number): void {
@@ -302,6 +341,13 @@ export class DwarfView {
       this.tag.x = 3;
     }
 
+    const working = this.pose === 'work';
+    this.badge.container.visible = working;
+    if (working) {
+      this.badge.draw(a.activity, this.badgeCompact);
+      this.badge.container.position.set(0, headY - 14 - Math.sin(this.pop * Math.PI) * 4);
+    }
+
     // attention marker with live timer — always visible; the speech bubble takes
     // turns with other waiting dwarves (staggered by seed) so bubbles never pile up.
     if (attention && a.online) {
@@ -326,7 +372,7 @@ export class DwarfView {
     }
     this.marker.visible = false;
     if (this.bubble.visible && now > this.bubbleUntil) this.bubble.visible = false;
-    if (this.bubble.visible) this.bubble.position.set(0, headY - 14);
+    if (this.bubble.visible) this.bubble.position.set(0, headY - (working ? 42 : 14));
     if (!a.online && this.hovered) this.drawBubble('Zzz… (resting)', 0xe5e7eb);
   }
 

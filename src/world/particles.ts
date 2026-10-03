@@ -1,6 +1,6 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 
-export type ParticleKind = 'smoke' | 'sparks' | 'fire' | 'bubbles' | 'magic' | 'confetti' | 'coin' | 'firefly' | 'portal' | 'rain';
+export type ParticleKind = 'smoke' | 'sparks' | 'fire' | 'bubbles' | 'magic' | 'confetti' | 'coin' | 'firefly' | 'portal' | 'rain' | 'mote';
 
 interface Particle {
   sprite: Sprite;
@@ -37,7 +37,8 @@ export class Particles {
   private live: Particle[] = [];
   private pool: Sprite[] = [];
 
-  emit(kind: ParticleKind, x: number, y: number, count = 1): void {
+  /** `tint` recolors the particle (used for activity-colored work motes). */
+  emit(kind: ParticleKind, x: number, y: number, count = 1, tint?: number): void {
     for (let i = 0; i < count; i++) {
       if (this.live.length > 1400) return;
       const sprite = this.pool.pop() || new Sprite(softDot());
@@ -46,6 +47,7 @@ export class Particles {
       sprite.visible = true;
       sprite.blendMode = kind === 'smoke' ? 'normal' : 'add';
       const p = this.spawn(kind, sprite);
+      if (tint !== undefined) sprite.tint = tint;
       this.container.addChild(sprite);
       this.live.push(p);
     }
@@ -85,6 +87,8 @@ export class Particles {
         sprite.blendMode = 'normal';
         sprite.rotation = 0.22;
         return { ...base, vx: -150, vy: 720 + r() * 160, max: 0.55 + r() * 0.35, size: 0.04 };
+      case 'mote':
+        return { ...base, vx: (r() - 0.5) * 22, vy: -22 - r() * 16, max: 0.9 + r() * 0.5, size: 0.08 };
       case 'firefly':
         sprite.tint = 0xd9f99d;
         return { ...base, vx: (r() - 0.5) * 10, vy: (r() - 0.5) * 6, max: 4 + r() * 3, size: 0.1 };
