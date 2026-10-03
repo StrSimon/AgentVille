@@ -223,13 +223,18 @@ describe('setup', () => {
     assert.equal(tapped.padding, 1);
 
     const launcher = path.join(process.env.AGENTVILLE_HOME, 'hook', 'run.sh');
-    const child = spawn(launcher, ['statusline'], { env: { ...process.env, AGENTVILLE_PORT: String(PORT) } });
+    const child = spawn(launcher, ['statusline'], { env: { ...process.env, AGENTVILLE_PORT: String(PORT), AGENTVILLE_DEBUG: '1' } });
     let out = '';
+    let err = '';
     child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (err += d));
     child.stdin.end(JSON.stringify({ rate_limits: { five_hour: { used_percentage: 23.5, resets_at: 1738425600 }, seven_day: { used_percentage: 41.2, resets_at: 1738857600 } } }));
     await new Promise(r => child.on('close', r));
     assert.equal(out.trim(), 'my-status');
-    const limits = await nextEvent(st => st.stats.limits.claude);
+    const limits = await nextEvent(st => st.stats.limits.claude).catch(async (e) => {
+      const st = await (await fetch(`${BASE}/api/state`)).json();
+      throw new Error(`${e.message}; hook stderr: ${err || '(none)'}; limits: ${JSON.stringify(st.stats.limits)}; launcher: ${fs.readFileSync(launcher, 'utf8').slice(0, 400)}`);
+    });
     assert.deepEqual(limits.windows.map(w => [w.windowMinutes, w.usedPercent]), [[300, 23.5], [10080, 41.2]]);
 
     setup.installIntegrations({ targets: ['claude'] });

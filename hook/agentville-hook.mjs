@@ -129,7 +129,7 @@ async function statusline() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rate_limits: input.rate_limits, cost: input.cost, model: input.model, session_id: input.session_id }),
       signal: AbortSignal.timeout(1500),
-    }).catch(() => {})
+    }).catch((err) => { if (process.env.AGENTVILLE_DEBUG) process.stderr.write(`statusline report failed: ${err}\n`); })
     : Promise.resolve();
 
   let original = '';
