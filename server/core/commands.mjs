@@ -85,6 +85,7 @@ export function createCommands(ctx) {
     const rt = ctx.runtime(id);
     if (!rt.orders.length) return null;
     const orders = rt.orders.splice(0);
+    ctx.changed?.();
     ctx.fx('order-delivered', { agentId: id, text: orders.join(' · ') });
     return orders;
   }
@@ -119,6 +120,7 @@ export function createCommands(ctx) {
     rt.orders.push(msg);
     ctx.fx('order', { agentId, text: msg });
     ctx.pushAgent(agentId);
+    ctx.changed?.();
     return true;
   }
 

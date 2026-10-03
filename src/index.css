@@ -48,6 +48,8 @@
     overflow: hidden;
   }
   button { cursor: pointer; }
+  /* Desktop app: the top bar is a window drag region — keep everything interactive clickable */
+  button, a, input, select, textarea, label, [role='dialog'], .panel { -webkit-app-region: no-drag; }
   :focus-visible { outline: 2px solid var(--color-ember); outline-offset: 2px; }
   ::selection { background: rgb(245 158 11 / 0.35); }
 }

@@ -20,17 +20,33 @@ const FIGURE = 'Seen from the same elevated isometric game camera (looking down 
 
 const TEXTURE = 'Seamless tileable texture seen straight from above (orthographic top-down, no perspective), evenly lit, no vignette, edges wrap perfectly in both directions, same painterly palette as the reference, no objects, no text. Square 1:1, opaque.';
 
+const SHEET = 'Character sheet: exactly THREE full-body poses of this SAME character side by side from left to right, evenly spaced, identical scale and outfit: (1) standing relaxed, (2) walking mid-stride, (3) sitting on the ground looking bored with chin resting on one hand. All seen from the same elevated isometric game camera (looking down about 30 degrees), facing the lower left. Fully transparent background (PNG with alpha), no ground, no shadows, no text, no labels. Landscape 3:2.';
+const PORTRAIT = 'Bust portrait card art of this character, shoulders up, three-quarter view, warm golden-hour rim light, softly blurred dwarf village background, rich painterly detail, no text, no frame. Portrait 3:4, opaque.';
+const UPGRADE = 'Show the SAME building type as in the first attached image, upgraded as described, keeping its function and color scheme recognizable.';
+
+function promptFor({ name, desc, ref }) {
+  if (name.startsWith('ground-')) return `create a ${desc}. ${TEXTURE}`;
+  if (name.startsWith('sheet-')) return `create a game character sprite sheet of ${desc}. ${SHEET}`;
+  if (name.startsWith('portrait-')) return `create a portrait of ${desc}. ${PORTRAIT}`;
+  const kind = name.startsWith('dwarf-') ? FIGURE : CAMERA;
+  return `create a single isolated game asset sprite: ${desc}. ${ref ? UPGRADE : ''} ${kind}`;
+}
+
 const jobs = fs.readFileSync(jobsFile, 'utf8').split('\n')
   .map(l => l.trim()).filter(Boolean)
-  .map(l => ({ name: l.split('|')[0], desc: l.slice(l.indexOf('|') + 1) }))
+  .map(l => { const [name, desc, ref] = l.split('|'); return { name, desc, ref }; })
   .filter(j => !only || only.includes(j.name))
   .filter(j => !fs.existsSync(path.join(DIR, `${j.name}.png`)));
 
-function run({ name, desc }) {
-  const prompt = `Use the imagegen skill with the built-in image_gen tool. ${name.startsWith('ground-') ? '' : 'Request a transparent background. '}Create ONE image and copy the final result into the current directory as ${name}.png. Prompt: ${STYLE}, ${name.startsWith('ground-') ? `create a ${desc}. ${TEXTURE}` : `create a single isolated game asset sprite: ${desc}. ${name.startsWith('dwarf-') ? FIGURE : CAMERA}`}`;
+function run(job) {
+  const { name, ref } = job;
+  const opaque = name.startsWith('ground-') || name.startsWith('portrait-');
+  const refNote = ref ? 'The FIRST attached image is the subject reference; the second is the style reference. ' : '';
+  const prompt = `Use the imagegen skill with the built-in image_gen tool. ${opaque ? '' : 'Request a transparent background. '}Create ONE image and copy the final result into the current directory as ${name}.png. ${refNote}Prompt: ${STYLE}, ${promptFor(job)}`;
+  const images = [...(ref ? [path.join(DIR, ref)] : []), path.join(DIR, 'key-art.png')].map(f => `--image=${f}`);
   return new Promise((resolve) => {
     const log = fs.openSync(path.join(DIR, `log-${name}.txt`), 'w');
-    const child = spawn('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', DIR, `--image=${path.join(DIR, 'key-art.png')}`, prompt], { stdio: ['ignore', log, log] });
+    const child = spawn('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', DIR, ...images, prompt], { stdio: ['ignore', log, log] });
     child.on('close', () => {
       const ok = fs.existsSync(path.join(DIR, `${name}.png`));
       console.log(`${ok ? 'done  ' : 'FAILED'} ${name}`);

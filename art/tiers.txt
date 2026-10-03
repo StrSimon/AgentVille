@@ -1,0 +1,30 @@
+townhall-t2|the townhall, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|townhall.png
+townhall-t3|the townhall at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|townhall.png
+forge-t2|the forge, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|forge.png
+forge-t3|the forge at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|forge.png
+arena-t2|the arena, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|arena.png
+arena-t3|the arena at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|arena.png
+library-t2|the library, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|library.png
+library-t3|the library at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|library.png
+scriptorium-t2|the scriptorium, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|scriptorium.png
+scriptorium-t3|the scriptorium at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|scriptorium.png
+guild-t2|the guild, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|guild.png
+guild-t3|the guild at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|guild.png
+apothecary-t2|the apothecary, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|apothecary.png
+apothecary-t3|the apothecary at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|apothecary.png
+observatory-t2|the observatory, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|observatory.png
+observatory-t3|the observatory at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|observatory.png
+tower-t2|the tower, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|tower.png
+tower-t3|the tower at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|tower.png
+post-t2|the post, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|post.png
+post-t3|the post at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|post.png
+mine-t2|the mine, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|mine.png
+mine-t3|the mine at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|mine.png
+gate-t2|the gate, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|gate.png
+gate-t3|the gate at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|gate.png
+well-t2|the well, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|well.png
+well-t3|the well at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|well.png
+tavern-t2|the tavern, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|tavern.png
+tavern-t3|the tavern at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|tavern.png
+campfire-t2|the campfire, expanded and upgraded to a prosperous level: an extra wing or second storey, sturdier masonry, more banners, lanterns and gold trim|campfire.png
+campfire-t3|the campfire at its grandest legendary level: a majestic fortified version with small towers, gilded roofs, statues and softly glowing runes|campfire.png

@@ -12,6 +12,7 @@ function setup() {
     respond: vi.fn(async () => true),
     sendOrder: vi.fn(async () => true),
     setLeash: vi.fn(async () => true),
+    dismiss: vi.fn(async () => true),
   } as unknown as Controller;
   const api = {
     controller, mode: 'demo', hosted: false, selectedId: null, select: vi.fn(), focus: vi.fn(),
@@ -86,5 +87,7 @@ describe('Inbox', () => {
     fireEvent.change(screen.getByLabelText(/send orders to grimdur/i), { target: { value: 'Write the changelog' } });
     fireEvent.click(screen.getByRole('button', { name: /^send orders$/i }));
     expect(controller.sendOrder).toHaveBeenCalledWith('a1', 'Write the changelog');
+    fireEvent.click(screen.getByRole('button', { name: /isn't waiting/i }));
+    expect(controller.dismiss).toHaveBeenCalledWith('a1');
   });
 });

@@ -51,7 +51,9 @@ export function OrderBox({ agent, compact = false }: { agent: Agent; compact?: b
           onClick={() => controller.setLeash(agent.id, !leashed)}
           aria-pressed={leashed}
           className={`flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[10.5px] font-semibold ring-1 transition ${leashed ? 'bg-ember/15 text-ember-soft ring-ember/50' : 'text-muted ring-line hover:text-parchment'}`}
-          title="When it finishes, the dwarf waits in the village for your next orders instead of going idle"
+          title={agent.source === 'codex'
+            ? 'Codex: while it waits here its terminal input is paused — use this only if you steer it from the village'
+            : 'When it finishes, the dwarf waits in the village for your next orders instead of going idle'}
         >
           <Anchor size={11} /> Wait for orders
         </button>

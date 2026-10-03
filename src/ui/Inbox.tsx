@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BellRing, Crosshair, Hourglass, Terminal } from 'lucide-react';
+import { BellRing, Crosshair, EyeOff, Hourglass, Terminal } from 'lucide-react';
 import { needsYou } from '../state/reducer';
 import { store, useVillage } from '../state/store';
 import type { Agent, PendingRequest } from '../types';
@@ -11,7 +11,7 @@ import { SourceBadge } from './widgets';
 import { useNow } from './use-now';
 
 function Card({ agent, request, now }: { agent: Agent; request?: PendingRequest; now: number }) {
-  const { focus, select } = useApp();
+  const { focus, select, controller } = useApp();
   const att = agent.attention!;
   const blocking = att.kind !== 'done';
   const accent = blocking ? 'ring-alert/55 shadow-[0_0_30px_-10px_var(--color-alert)]' : 'ring-ember/35';
@@ -34,6 +34,13 @@ function Card({ agent, request, now }: { agent: Agent; request?: PendingRequest;
           className="grid size-7 place-items-center rounded-lg text-muted ring-1 ring-line transition hover:text-parchment">
           <Crosshair size={13} />
         </button>
+        {!request && (
+          <button type="button" onClick={() => controller.dismiss(agent.id)} aria-label={`${agent.name} isn't waiting — send home`}
+            title="Not actually waiting (closed terminal, script…) — send home"
+            className="grid size-7 place-items-center rounded-lg text-muted ring-1 ring-line transition hover:text-parchment">
+            <EyeOff size={13} />
+          </button>
+        )}
       </header>
 
       {request?.kind === 'permission' && <PermissionBody req={request} now={now} />}

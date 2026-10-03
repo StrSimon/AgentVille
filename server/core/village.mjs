@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS = {
   approvalMode: 'both',     // 'both' | 'village' | 'terminal'
   approvalWaitSec: 45,      // 'both': wait this long for the village before the terminal asks
   ordersMode: 'auto',       // 'auto': idle Claude sessions wait for village orders while the village is open | 'leash' | 'off'
+  codexHold: false,         // also hold idle Codex sessions in 'auto' mode (enable once verified)
   leashWaitMin: 45,         // how long an idle dwarf waits in the village for new orders
   mainTimeoutMin: 180,      // main dwarves go home after this much silence
   subTimeoutMin: 15,
@@ -34,6 +35,7 @@ export function createVillage(opts = {}) {
   const changed = opts.onChange || (() => {});
   const hasViewers = opts.hasViewers || (() => false);
   const readTranscript = opts.readTranscript || (() => []);
+  const readSessionMeta = opts.readSessionMeta || (() => null);
   const data = migrateData(opts.data);
   const settings = { ...DEFAULT_SETTINGS, ...(opts.settings || {}) };
   let prices = opts.prices;
@@ -77,7 +79,9 @@ export function createVillage(opts = {}) {
   function runtime(id) {
     let rt = rts.get(id);
     if (!rt) {
-      rt = { online: false, busy: false, activity: 'idle', detail: '', attention: null, leash: false, orders: [], lastSeen: now() };
+      // queued orders live in the persisted data so they survive a restart
+      const orders = (data.orders[id] ||= []);
+      rt = { online: false, busy: false, activity: 'idle', detail: '', attention: null, leash: false, orders, lastSeen: now() };
       rts.set(id, rt);
     }
     return rt;
@@ -112,7 +116,18 @@ export function createVillage(opts = {}) {
     wake(id, rt, { bindKey: key, project: p.project || prof.clan, source: p.source, parentId: null });
     if (p.model) rt.model = p.model;
     if (p.transcript_path) watchTranscript(p.transcript_path, id);
+    if (rt.headless === undefined || p.entrypoint) rt.headless = isAutomation(p);
     return id;
+  }
+
+  /** claude -p / Agent SDK / codex exec: nobody is waiting at a keyboard. */
+  function isAutomation(p) {
+    if (p.entrypoint) return /^sdk/.test(p.entrypoint);
+    if (p.source === 'codex' && p.transcript_path) {
+      const meta = readSessionMeta(p.transcript_path);
+      return !!meta && (meta.originator === 'codex_exec' || meta.source === 'exec');
+    }
+    return false;
   }
 
   function bindSub(p, mainId) {
@@ -201,7 +216,7 @@ export function createVillage(opts = {}) {
   const ingestFor = transcripts.ingestFor;
 
   const commands = createCommands({
-    data, rts, settings, control, now, fx, pushAgent, setActivity, setAttention, runtime, hasViewers,
+    data, rts, settings, control, now, fx, pushAgent, setActivity, setAttention, runtime, hasViewers, changed,
   });
   const { askPermission, askQuestion, takeOrders, waitForOrders } = commands;
 
@@ -281,6 +296,7 @@ export function createVillage(opts = {}) {
       }
 
       case 'Notification':
+        if (runtime(mainId).headless) break;
         if (p.notification_type === 'idle_prompt' && !rt.attention) {
           setAttention(mainId, { kind: 'done', text: 'waiting for your next task' });
           setActivity(mainId, 'waiting', '');
@@ -330,10 +346,17 @@ export function createVillage(opts = {}) {
         ingestFor(mainId, true);
         const mrt = runtime(mainId);
         mrt.busy = false;
+        if (mrt.headless) {
+          // automation finished its job: no waiting, no inbox — the dwarf just goes home
+          goHome(mainId, 'finished its job');
+          for (const [k, v] of [...bindings]) if (v === mainId) bindings.delete(k);
+          break;
+        }
         let orders = takeOrders(mainId);
         // Holding the Stop hook doesn't block the terminal (verified: typing there is accepted
         // immediately), so idle Claude sessions wait in the village where orders can reach them.
-        const autoHold = settings.ordersMode === 'auto' && p.source === 'claude' && hasViewers();
+        const holdable = p.source === 'claude' || (p.source === 'codex' && settings.codexHold);
+        const autoHold = settings.ordersMode === 'auto' && holdable && hasViewers();
         const hold = settings.ordersMode !== 'off' && (mrt.leash || autoHold) && activeCrew(p) === 0;
         if (!orders && hold) {
           setAttention(mainId, { kind: 'done', text: 'waiting for orders in the village', leashed: true });
@@ -435,6 +458,15 @@ export function createVillage(opts = {}) {
     }
   }
 
+  /** User says this dwarf isn't really waiting (closed terminal etc.): send it home. */
+  function dismiss(agentId) {
+    if (!rts.get(agentId)?.online) return false;
+    goHome(agentId, 'was sent home');
+    for (const [k, v] of [...bindings]) if (v === agentId) bindings.delete(k);
+    changed();
+    return true;
+  }
+
   function snapshot() {
     return {
       type: 'snapshot',
@@ -466,6 +498,7 @@ export function createVillage(opts = {}) {
     respond: commands.respond,
     sendOrder: commands.sendOrder,
     setLeash: commands.setLeash,
+    dismiss,
     snapshot,
     updateSettings,
     setPrices: (p) => { prices = p; },

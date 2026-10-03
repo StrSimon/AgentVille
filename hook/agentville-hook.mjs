@@ -68,6 +68,10 @@ async function readStdin() {
 
 async function main() {
   const raw = await readStdin();
+  if (process.env.AGENTVILLE_DEBUG_ENV) {
+    const { appendFileSync } = await import('node:fs');
+    appendFileSync(process.env.AGENTVILLE_DEBUG_ENV, JSON.stringify({ env: process.env, input: JSON.parse(raw || '{}') }) + '\n');
+  }
   if (!raw.trim()) return;
   const input = JSON.parse(raw);
   const event = input.hook_event_name;
@@ -91,6 +95,8 @@ async function main() {
     message: typeof input.message === 'string' ? input.message.slice(0, 200) : undefined,
     error: typeof input.error === 'string' ? input.error.slice(0, 200) : undefined,
     stop_hook_active: !!input.stop_hook_active,
+    // 'cli' / IDE = a human at the keyboard; 'sdk-*' = claude -p / Agent SDK automation
+    entrypoint: process.env.CLAUDE_CODE_ENTRYPOINT || undefined,
   };
   if (event === 'PostToolUse' || event === 'PostToolUseFailure') {
     payload.input_bytes = byteLength(input.tool_input);

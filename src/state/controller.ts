@@ -19,6 +19,7 @@ export interface Controller {
   respond(requestId: string, answer: RequestAnswer): Promise<boolean>;
   sendOrder(agentId: string, text: string): Promise<boolean>;
   setLeash(agentId: string, on: boolean): Promise<boolean>;
+  dismiss(agentId: string): Promise<boolean>;
   saveSettings(patch: Partial<Settings>): Promise<void>;
   setupStatus(): Promise<SetupStatus | null>;
   setup(targets?: Array<'claude' | 'codex'>): Promise<{ installed: string[]; notes: string[] } | null>;
@@ -81,6 +82,7 @@ export function createLiveController(): Controller {
     respond: async (id, answer) => !!(await call<{ ok: boolean }>(`/api/requests/${id}`, answer))?.ok,
     sendOrder: async (id, text) => !!(await call<{ ok: boolean }>(`/api/agents/${id}/orders`, { text }))?.ok,
     setLeash: async (id, on) => !!(await call<{ ok: boolean }>(`/api/agents/${id}/leash`, { on }))?.ok,
+    dismiss: async (id) => !!(await call<{ ok: boolean }>(`/api/agents/${id}/dismiss`, {}))?.ok,
     saveSettings: async (patch) => { await call('/api/settings', patch); },
     setupStatus: () => call<SetupStatus>('/api/setup'),
     setup: (targets) => call('/api/setup', { targets }),

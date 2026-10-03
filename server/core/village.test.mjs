@@ -406,3 +406,52 @@ describe('orders reach idle Claude sessions', () => {
     assert.match(out.systemMessage, /Tabs statt Spaces/);
   });
 });
+
+describe('persistence of orders', () => {
+  it('should keep queued orders across a restart of the village', async () => {
+    const v = setup();
+    await v.village.handleHook(hook('UserPromptSubmit'));
+    await v.village.handleHook(hook('Stop'));
+    const id = v.online()[0].id;
+    v.village.sendOrder(id, 'Nicht vergessen: Changelog');
+    const saved = JSON.parse(JSON.stringify(v.village.data));
+
+    const v2 = setup({ data: saved });
+    await v2.village.handleHook(hook('UserPromptSubmit', { session_id: 's1' }));
+    const out = await v2.village.handleHook(hook('PostToolUse', { session_id: 's1', tool_name: 'Read' }));
+    assert.match(out.hookSpecificOutput.additionalContext, /Changelog/);
+  });
+});
+
+describe('automation sessions (claude -p, codex exec)', () => {
+  it('should never hold a headless Claude run or ask the user about it', async () => {
+    const v = setup({ settings: { ordersMode: 'auto' } });
+    await v.village.handleHook(hook('UserPromptSubmit', { entrypoint: 'sdk-cli' }));
+    const out = await v.village.handleHook(hook('Stop', { entrypoint: 'sdk-cli' }));
+    assert.equal(out, undefined);
+    assert.equal(v.online().length, 0, 'job done — went home');
+    assert.equal(v.village.snapshot().requests.length, 0);
+  });
+
+  it('should recognise codex exec runs from the session log', async () => {
+    let t = 0;
+    const v = createVillage({
+      settings: { ordersMode: 'auto', codexHold: true },
+      now: () => (t += 10), hasViewers: () => true,
+      readSessionMeta: () => ({ originator: 'codex_exec', source: 'exec' }),
+    });
+    const base = { source: 'codex', session_id: 'cx-exec', project: 'art', transcript_path: '/r.jsonl' };
+    await v.handleHook({ ...base, event: 'UserPromptSubmit' });
+    const out = await v.handleHook({ ...base, event: 'Stop' });
+    assert.equal(out, undefined);
+    assert.equal(v.snapshot().agents.filter(a => a.online).length, 0);
+  });
+
+  it('should let the user dismiss a stale dwarf from the inbox', async () => {
+    const v = setup();
+    await v.village.handleHook(hook('Stop'));
+    const id = v.online()[0].id;
+    assert.equal(v.village.dismiss(id), true);
+    assert.equal(v.online().length, 0);
+  });
+});

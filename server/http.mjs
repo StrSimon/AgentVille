@@ -14,6 +14,7 @@ import {
 import { integrationStatus, installIntegrations, uninstallIntegrations } from './setup.mjs';
 import { parseClaudeLimits } from './core/usage.mjs';
 import { latestCodexLimits } from './codex-limits.mjs';
+import { readSessionMeta } from './store.mjs';
 
 export const VERSION = JSON.parse(fs.readFileSync(path.join(PACKAGE_DIR, 'package.json'), 'utf8')).version;
 
@@ -86,6 +87,7 @@ export async function startServer(opts = {}) {
     onChange: () => saver.schedule(),
     hasViewers: () => clients.size > 0 || !!opts.hasViewers?.(),
     readTranscript: readTranscriptLines,
+    readSessionMeta,
   });
   saver = createSaver(p.data, () => village.data);
   const ticker = setInterval(() => village.tick(), 5000);
@@ -184,14 +186,20 @@ export async function startServer(opts = {}) {
 
     // Dynamic control routes
     const reqMatch = /^\/api\/requests\/([\w-]+)$/.exec(url.pathname);
-    const agentMatch = /^\/api\/agents\/([\w-]+)\/(orders|leash)$/.exec(url.pathname);
+    const agentMatch = /^\/api\/agents\/([\w-]+)\/(orders|leash|dismiss)$/.exec(url.pathname);
     let route = routes[key];
     if (!route && req.method === 'POST' && reqMatch) {
       route = { control: true, run: (body) => ({ ok: village.respond(reqMatch[1], body.release ? null : body) }) };
     } else if (!route && req.method === 'POST' && agentMatch) {
-      route = agentMatch[2] === 'orders'
-        ? { control: true, run: (body) => ({ ok: village.sendOrder(agentMatch[1], body.text) }) }
-        : { control: true, run: (body) => ({ ok: village.setLeash(agentMatch[1], body.on) }) };
+      const [, id, action] = agentMatch;
+      route = {
+        control: true,
+        run: (body) => ({
+          ok: action === 'orders' ? village.sendOrder(id, body.text)
+            : action === 'leash' ? village.setLeash(id, body.on)
+              : village.dismiss(id),
+        }),
+      };
     }
 
     if (route) {

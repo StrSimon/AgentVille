@@ -149,6 +149,7 @@ export function createDemoController(): Controller {
     respond: async (id, answer) => village.respond(id, answer.release ? null : answer),
     sendOrder: async (id, text) => village.sendOrder(id, text),
     setLeash: async (id, on) => village.setLeash(id, on),
+    dismiss: async (id) => village.dismiss(id),
     saveSettings: async (patch) => { village.updateSettings(patch); },
     setupStatus: async () => null,
     setup: async () => null,

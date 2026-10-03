@@ -11,13 +11,13 @@ const MAX_RECENT = 30;
 
 /**
  * @typedef {Record<string, any>} Bag
- * @typedef {{ version: number, agents: Bag, buildings: Bag, cursors: Bag, limits: Bag,
+ * @typedef {{ version: number, agents: Bag, buildings: Bag, cursors: Bag, orders: Bag, limits: Bag,
  *   stats: { daily: Bag, hourly: Bag, projects: Bag, models: Bag } }} VillageData
  */
 
 /** @returns {VillageData} */
 export function emptyData() {
-  return { version: 2, agents: {}, buildings: {}, cursors: {}, limits: {}, stats: { daily: {}, hourly: {}, projects: {}, models: {} } };
+  return { version: 2, agents: {}, buildings: {}, cursors: {}, orders: {}, limits: {}, stats: { daily: {}, hourly: {}, projects: {}, models: {} } };
 }
 
 /** Upgrade legacy (v1) data in place. */
@@ -26,6 +26,7 @@ export function migrateData(data) {
   d.agents ||= {};
   d.buildings ||= {};
   d.cursors ||= {};
+  d.orders ||= {};
   d.stats ||= {};
   d.limits ||= {};
   d.stats.daily ||= {};
@@ -112,9 +113,14 @@ export function pushRecent(p, activity, detail, now) {
   if (p.recentActivity.length > MAX_RECENT) p.recentActivity.splice(0, p.recentActivity.length - MAX_RECENT);
 }
 
+const BYTES_CAP = 64 * 1024;
+
 export function recordBytes(data, id, inBytes, outBytes, now) {
   const p = data.agents[id];
   if (!p) return;
+  // images and huge outputs shouldn't turn a fresh dwarf into a grand master
+  inBytes = Math.min(inBytes, BYTES_CAP);
+  outBytes = Math.min(outBytes, BYTES_CAP);
   p.totalInputBytes += inBytes;
   p.totalOutputBytes += outBytes;
   p.lastSeen = now;

@@ -124,3 +124,22 @@ export function readTranscriptLines(file, cursor) {
     if (fd !== undefined) fs.closeSync(fd);
   }
 }
+
+const metaCache = new Map();
+
+/** First line of a Codex rollout (session_meta): who started this session? */
+export function readSessionMeta(file) {
+  if (metaCache.has(file)) return metaCache.get(file);
+  let meta = null;
+  try {
+    const fd = fs.openSync(file, 'r');
+    const buf = Buffer.alloc(16384);
+    const n = fs.readSync(fd, buf, 0, buf.length, 0);
+    fs.closeSync(fd);
+    const first = buf.toString('utf8', 0, n).split('\n')[0];
+    const payload = JSON.parse(first).payload || {};
+    meta = { originator: payload.originator || null, source: payload.source || null };
+  } catch { /* not readable yet */ }
+  if (meta) metaCache.set(file, meta);
+  return meta;
+}

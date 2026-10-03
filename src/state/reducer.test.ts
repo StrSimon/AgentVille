@@ -4,7 +4,7 @@ import { makeAgent } from '../test-utils';
 
 const snapshot = (agents: Agent[], requests: PendingRequest[] = []): Snapshot => ({
   type: 'snapshot', agents, buildings: [], requests, stats: null as unknown as Snapshot['stats'],
-  settings: { approvalMode: 'both', approvalWaitSec: 45, ordersMode: 'auto', leashWaitMin: 30, mainTimeoutMin: 180, subTimeoutMin: 15 },
+  settings: { approvalMode: 'both', approvalWaitSec: 45, ordersMode: 'auto', codexHold: false, leashWaitMin: 30, mainTimeoutMin: 180, subTimeoutMin: 15 },
 });
 
 describe('reduce', () => {
