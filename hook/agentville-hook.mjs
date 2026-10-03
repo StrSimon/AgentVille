@@ -143,6 +143,8 @@ async function statusline() {
       const child = spawn(original, { shell: true, stdio: ['pipe', 'inherit', 'inherit'] });
       child.on('close', resolve);
       child.on('error', resolve);
+      // status line commands that don't read stdin close the pipe early — that's fine
+      child.stdin.on('error', () => {});
       child.stdin.end(raw);
     })
     : Promise.resolve();
