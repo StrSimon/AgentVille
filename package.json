@@ -124,7 +124,10 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "notarize": false
     },
     "win": {
       "target": [
