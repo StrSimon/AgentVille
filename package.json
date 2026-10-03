@@ -152,7 +152,9 @@
         "deb"
       ],
       "category": "Development",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "maintainer": "Simon Streblow <https://github.com/StrSimon>",
+      "synopsis": "Your Claude Code & Codex agents as a living dwarf village"
     }
   }
 }
