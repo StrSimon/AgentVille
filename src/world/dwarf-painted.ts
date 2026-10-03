@@ -71,10 +71,11 @@ export function animatePainted(p: PaintedParts, pose: Pose, activity: Activity, 
     case 'work': {
       const swing = activity === 'coding' || activity === 'installing' || activity === 'testing';
       const k = Math.max(0, Math.sin(t * (swing ? 9 : 3) + s));
-      y = swing ? -k * 2.5 : 0;
-      sy = base * (1 - (swing ? (1 - k) * 0.05 : 0));
-      sx = base * (1 + (swing ? (1 - k) * 0.03 : 0));
-      rot = swing ? (k - 0.5) * 0.08 : Math.sin(t * 1.5 + s) * 0.02;
+      // big wind-up and a squashy strike for tool work; a busy nod for desk work
+      y = swing ? -k * 4.5 : -Math.abs(Math.sin(t * 2.6 + s)) * 1.6;
+      sy = base * (1 - (swing ? (1 - k) * 0.09 : 0));
+      sx = base * (1 + (swing ? (1 - k) * 0.06 : 0));
+      rot = swing ? (0.5 - k) * 0.2 : Math.sin(t * 2.6 + s) * 0.05;
       break;
     }
     case 'alert':

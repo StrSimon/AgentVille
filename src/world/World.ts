@@ -302,14 +302,18 @@ export class World {
       const a = v.agent;
       if (a.online && a.activity !== 'idle' && a.activity !== 'waiting' && !a.attention) {
         const home = ACTIVITY_HOME[a.activity];
-        active.set(home, (active.get(home) || 0) + 1);
+        const n = active.get(home) || 0;
+        v.badgeCompact = n > 0;
+        active.set(home, n + 1);
       }
       v.update(dt, t, this.camera.zoom, this.selected === a.id, v === speaker && !someoneFocused);
+      v.emitWork(dt, t, this.particles);
     }
     for (const [id, view] of this.buildings) {
       view.active = active.get(id) || 0;
       view.update(dt, t, this.particles, id === 'townhall' && this.alert, this.camera.zoom, this.nightK);
     }
+    this.revealDwarves(dt);
     this.drawTethers(t, this.camera.zoom);
     this.lights.update(t, this.nightK);
     this.water.alpha = 0.35 + Math.sin(t * 1.7) * 0.25;
@@ -318,6 +322,21 @@ export class World {
       this.particles.emit('firefly', tree.x + (Math.random() - 0.5) * 40, tree.y - 20 - Math.random() * 30);
     }
     this.particles.update(dt);
+  }
+
+  /** Buildings turn see-through while a settled dwarf stands behind them. */
+  private revealDwarves(dt: number): void {
+    const feet = [...this.dwarves.values()].filter(v => v.settled).map(v => {
+      const g = v.parts.root.getGlobalPosition();
+      return { x: g.x, y: g.y, z: v.parts.root.zIndex };
+    });
+    for (const view of this.buildings.values()) {
+      const r = view.root;
+      const b = r.getBounds();
+      const insetX = b.width * 0.12;
+      const hidden = feet.some(f => f.z < r.zIndex && f.x > b.x + insetX && f.x < b.x + b.width - insetX && f.y > b.y + b.height * 0.15 && f.y < b.y + b.height);
+      r.alpha += ((hidden ? 0.55 : 1) - r.alpha) * Math.min(1, dt * 6);
+    }
   }
 
   /** Glowing leash from every online sub-agent to its parent, with data motes flowing along it. */
