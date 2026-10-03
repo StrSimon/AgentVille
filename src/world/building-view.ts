@@ -5,7 +5,7 @@ import type { ArtCtx, ArtResult } from './art-types';
 import { arena, campfire, forge, guild, library, tavern, townhall, well } from './art-a';
 import { apothecary, gate, mine, observatory, post, scriptorium, tower } from './art-b';
 import type { Particles } from './particles';
-import { SPRITE_FIT } from './sprites';
+import { SPRITE_FIT, type SpriteSet } from './sprites';
 
 const ART: Record<BuildingId, (ctx: ArtCtx) => ArtResult> = {
   townhall, campfire, guild, forge, arena, tavern, well, library,
@@ -28,7 +28,10 @@ export class BuildingView {
   private acc: number[] = [];
   private hovered = false;
 
-  constructor(readonly def: BuildingDef, private onLayerChange: () => void, private texture?: Texture) {
+  private texture?: Texture;
+  private glow?: Sprite;
+
+  constructor(readonly def: BuildingDef, private onLayerChange: () => void, private sprites: SpriteSet = {}) {
     this.root.eventMode = 'static';
     this.root.cursor = 'pointer';
     this.root.on('pointerover', () => { this.hovered = true; });
@@ -48,10 +51,27 @@ export class BuildingView {
     this.extras.length = 0;
     const g = new Graphics();
     this.lit = new Graphics();
+    // painted upgrade tiers: level 4+ and 7+ show a grander version of the building
+    const tier = level >= 7 && this.sprites[`${this.def.id}-t3`] ? `${this.def.id}-t3`
+      : level >= 4 && this.sprites[`${this.def.id}-t2`] ? `${this.def.id}-t2` : this.def.id;
+    this.texture = this.sprites[tier];
+    this.glow = undefined;
     if (this.texture) {
       // Painted sprite: keep the procedural art only for its lights, emitters and extras.
       this.art = ART[this.def.id]({ g: new Graphics(), lit: new Graphics(), b: this.def, level, add: () => {} });
-      this.root.addChild(this.pulse, this.paintedSprite(level));
+      const painted = this.paintedSprite(level);
+      this.root.addChild(this.pulse, painted);
+      const glowTex = this.sprites[`${tier}-glow`];
+      if (glowTex) {
+        // lit windows and fires from the painted art, faded in at night
+        this.glow = new Sprite(glowTex);
+        this.glow.anchor.set(0.5, 1);
+        this.glow.position.copyFrom(painted.position);
+        this.glow.scale.set(painted.scale.x * (painted.texture.width / glowTex.width));
+        this.glow.blendMode = 'add';
+        this.glow.alpha = 0;
+        this.root.addChild(this.glow);
+      }
     } else {
       this.root.addChild(this.pulse, g, this.lit);
       this.art = ART[this.def.id]({ g, lit: this.lit, b: this.def, level, add: (c) => this.root.addChild(c) });
@@ -95,6 +115,7 @@ export class BuildingView {
     this.art.animate?.(t, this.active);
     // windows glow at dusk/night, a little brighter while dwarves work inside
     this.lit.alpha = Math.min(1, night * 1.15 + (this.active ? 0.15 : 0)) * (0.92 + Math.sin(t * 3 + this.def.gx) * 0.04);
+    if (this.glow) this.glow.alpha = Math.min(1, night * 1.3 + (this.active ? 0.12 : 0)) * (0.85 + Math.sin(t * 4 + this.def.gy) * 0.08);
     this.art.emitters.forEach((e, i) => {
       if (e.whenActive && !this.active) return;
       this.acc[i] += dt * e.rate * (e.whenActive ? Math.min(2, 0.6 + this.active * 0.4) : 1);

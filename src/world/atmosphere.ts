@@ -29,7 +29,7 @@ export class Clouds {
   readonly ground = new Container({ label: 'cloud-shadows' });
   private clouds: Cloud[] = [];
 
-  constructor(count = 6) {
+  constructor(count = 9) {
     const center = iso(15.5, 15.5);
     for (let i = 0; i < count; i++) {
       const w = 160 + Math.random() * 140;
@@ -47,11 +47,13 @@ export class Clouds {
     }
   }
 
-  update(dt: number, night: number): void {
-    this.sky.alpha = 0.38 * (1 - night * 0.7);
-    this.ground.alpha = 1 - night;
+  update(dt: number, night: number, storm = 0): void {
+    this.sky.alpha = (0.38 + storm * 0.5) * (1 - night * 0.6);
+    this.ground.alpha = (1 - night) * (1 + storm);
+    const tint = storm > 0.05 ? 0x8a93a3 : 0xffffff;
     for (const c of this.clouds) {
-      c.x += c.speed * dt;
+      for (const s of c.body.children) (s as Sprite).tint = tint;
+      c.x += c.speed * dt * (1 + storm * 2);
       if (c.x > SPAN.maxX) c.x = SPAN.minX;
       // clouds float high: their shadow lands down-right of them
       c.body.position.set(c.x, c.y - 260);
@@ -105,10 +107,10 @@ export class LightGrade {
     this.vignette.clear().rect(0, 0, w, h).fill(vig);
   }
 
-  update(night: number): void {
-    // golden hour is warmest; at night the sun glow fades out
+  update(night: number, storm = 0): void {
+    // golden hour is warmest; at night and in bad weather the sun glow fades out
     const dusk = 1 - Math.abs(night - 0.4) / 0.4;
-    this.sun.alpha = Math.max(0, 1 - night) * 0.9 + Math.max(0, dusk) * 0.6;
+    this.sun.alpha = (Math.max(0, 1 - night) * 0.9 + Math.max(0, dusk) * 0.6) * (1 - storm);
     this.sun.tint = dusk > 0 ? 0xffb070 : 0xffffff;
     this.vignette.alpha = 0.55 + night * 0.45;
   }

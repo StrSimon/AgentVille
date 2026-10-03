@@ -1,6 +1,6 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 
-export type ParticleKind = 'smoke' | 'sparks' | 'fire' | 'bubbles' | 'magic' | 'confetti' | 'coin' | 'firefly' | 'portal';
+export type ParticleKind = 'smoke' | 'sparks' | 'fire' | 'bubbles' | 'magic' | 'confetti' | 'coin' | 'firefly' | 'portal' | 'rain';
 
 interface Particle {
   sprite: Sprite;
@@ -39,7 +39,7 @@ export class Particles {
 
   emit(kind: ParticleKind, x: number, y: number, count = 1): void {
     for (let i = 0; i < count; i++) {
-      if (this.live.length > 900) return;
+      if (this.live.length > 1400) return;
       const sprite = this.pool.pop() || new Sprite(softDot());
       sprite.anchor.set(0.5);
       sprite.position.set(x + (Math.random() - 0.5) * 6, y + (Math.random() - 0.5) * 3);
@@ -80,6 +80,11 @@ export class Particles {
       case 'coin':
         sprite.tint = 0xfcd34d;
         return { ...base, vx: (r() - 0.5) * 20, vy: -60 - r() * 20, max: 1.1, size: 0.12 };
+      case 'rain':
+        sprite.tint = 0xdfeaff;
+        sprite.blendMode = 'normal';
+        sprite.rotation = 0.22;
+        return { ...base, vx: -150, vy: 720 + r() * 160, max: 0.55 + r() * 0.35, size: 0.04 };
       case 'firefly':
         sprite.tint = 0xd9f99d;
         return { ...base, vx: (r() - 0.5) * 10, vy: (r() - 0.5) * 6, max: 4 + r() * 3, size: 0.1 };
@@ -105,6 +110,7 @@ export class Particles {
       p.sprite.y += p.vy * dt;
       p.sprite.rotation += p.spin * dt;
       const grow = p.kind === 'smoke' ? 1 + k * 2.2 : p.kind === 'fire' ? 1 - k * 0.7 : 1;
+      if (p.kind === 'rain') { p.sprite.scale.set(0.035, 0.5); p.sprite.alpha = 0.85 * (1 - k * 0.6); continue; }
       p.sprite.scale.set(p.size * grow, p.kind === 'confetti' ? p.size * 0.5 : p.size * grow);
       const fade = p.kind === 'firefly' ? Math.sin(k * Math.PI) * (0.6 + 0.4 * Math.sin(p.life * 6)) : Math.sin(Math.min(1, k * 4) * Math.PI / 2) * (1 - k);
       p.sprite.alpha = (p.kind === 'smoke' ? 0.38 : 1) * fade;

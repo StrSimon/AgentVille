@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, Trophy } from 'lucide-react';
+import { CloudLightning, CloudRain, Sparkles, Trophy } from 'lucide-react';
+import { notificationsAllowed } from '../lib/attention';
 import { store, useVillage } from '../state/store';
 import { sound } from '../lib/sound';
 import { ACTIVITY_META } from './activity-meta';
@@ -40,16 +41,20 @@ export function Toasts() {
     for (const t of toasts) {
       if (seen.has(t.id)) continue;
       seen.add(t.id);
-      sound.achievement();
-      setTimeout(() => store.dismissToast(t.id), 6000);
+      if (t.kind === 'warning') {
+        sound.attention();
+        if (document.hidden && notificationsAllowed()) new Notification('AgentVille', { body: t.text, tag: `agentville-warn-${t.id}` });
+      } else sound.achievement();
+      setTimeout(() => store.dismissToast(t.id), t.kind === 'warning' ? 12000 : 6000);
     }
   }, [toasts, seen]);
   return (
     <div className="pointer-events-none absolute top-[84px] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2" aria-live="polite">
       {toasts.map(t => (
-        <div key={t.id} className="panel animate-rise flex items-center gap-2.5 rounded-2xl px-4 py-2.5 ring-1 ring-ember/40">
-          <span className="grid size-7 place-items-center rounded-full bg-ember/20 text-ember-soft">
-            {t.kind === 'achievement' ? <Trophy size={14} /> : <Sparkles size={14} />}
+        <div key={t.id} className={`panel animate-rise flex items-center gap-2.5 rounded-2xl px-4 py-2.5 ring-1 ${t.kind === 'warning' ? 'ring-alert/60' : 'ring-ember/40'}`} role={t.kind === 'warning' ? 'alert' : undefined}>
+          <span className={`grid size-7 place-items-center rounded-full ${t.kind === 'warning' ? 'bg-alert/20 text-alert' : 'bg-ember/20 text-ember-soft'}`}>
+            {t.kind === 'warning' ? (t.severity === 'critical' ? <CloudLightning size={14} /> : <CloudRain size={14} />)
+              : t.kind === 'achievement' ? <Trophy size={14} /> : <Sparkles size={14} />}
           </span>
           <span className="text-[13px] font-medium">{t.text}</span>
         </div>

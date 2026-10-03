@@ -16,6 +16,9 @@ export interface AppApi {
   timeMode: TimeMode;
   setTimeMode: (m: TimeMode) => void;
   switchMode: (m: 'live' | 'demo') => void;
+  /** null = follow your limits; otherwise a fixed preview level 0..1 */
+  weatherPreview: number | null;
+  setWeatherPreview: (v: number | null) => void;
 }
 
 export const AppContext = createContext<AppApi | null>(null);

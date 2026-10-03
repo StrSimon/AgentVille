@@ -149,7 +149,7 @@ export interface Settings {
 }
 
 export type FxKind = 'spawn' | 'despawn' | 'activity' | 'failure' | 'level' | 'building-level'
-  | 'achievement' | 'order' | 'order-delivered' | 'decision';
+  | 'achievement' | 'order' | 'order-delivered' | 'decision' | 'warning';
 
 export interface FxEvent {
   type: 'fx';
@@ -165,6 +165,7 @@ export interface FxEvent {
   buildingId?: string;
   source?: Source;
   parentId?: string | null;
+  severity?: 'high' | 'critical';
 }
 
 export interface Snapshot {

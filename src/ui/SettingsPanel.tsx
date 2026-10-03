@@ -4,6 +4,7 @@ import { useVillage } from '../state/store';
 import type { SetupStatus } from '../state/controller';
 import type { Settings } from '../types';
 import { notificationsAllowed, requestNotifications } from '../lib/attention';
+import { ambience } from '../lib/ambience';
 import { useApp } from './app-context';
 
 function Connection({ name, status, onConnect }: { name: string; status?: SetupStatus['claude']; onConnect: () => void }) {
@@ -24,11 +25,12 @@ function Connection({ name, status, onConnect }: { name: string; status?: SetupS
 }
 
 export function SettingsPanel() {
-  const { setOverlay, controller, timeMode, setTimeMode } = useApp();
+  const { setOverlay, controller, timeMode, setTimeMode, weatherPreview, setWeatherPreview } = useApp();
   const settings = useVillage(s => s.settings);
   const [setup, setSetup] = useState<SetupStatus | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [notify, setNotify] = useState(notificationsAllowed());
+  const [ambient, setAmbient] = useState(ambience.enabled);
 
   useEffect(() => { void controller.setupStatus().then(setSetup); }, [controller]);
 
@@ -111,6 +113,22 @@ export function SettingsPanel() {
             </button>
           ))}
         </div>
+        <h3 className="eyebrow mt-4 mb-2">Weather</h3>
+        <p className="mb-2 text-[11px] text-muted">The sky follows your plan limits: sunny with a fresh quota, rain when it gets tight, a storm right before the end. Preview it here:</p>
+        <div className="flex gap-1.5" role="radiogroup" aria-label="Weather preview">
+          {([[null, 'Follow limits'], [0, 'Clear'], [0.45, 'Clouds'], [0.72, 'Rain'], [1, 'Storm']] as const).map(([v, label]) => (
+            <button key={label} type="button" role="radio" aria-checked={weatherPreview === v} onClick={() => setWeatherPreview(v)}
+              className={`flex-1 rounded-xl px-2 py-2 text-[11.5px] font-semibold ring-1 ${weatherPreview === v ? 'bg-white/10 ring-white/25' : 'text-muted ring-line hover:text-parchment'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <button type="button" aria-pressed={ambient}
+          onClick={() => { ambience.set(!ambient); setAmbient(!ambient); }}
+          className={`mt-4 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-[12px] font-semibold ring-1 ${ambient ? 'bg-ember/12 ring-ember/50' : 'bg-white/[0.03] ring-line hover:ring-white/20'}`}>
+          <span>Ambient sounds <span className="font-normal text-muted">— birds, crickets, the forge, rain & thunder (no music)</span></span>
+          <span className={ambient ? 'text-ember-soft' : 'text-muted'}>{ambient ? 'On' : 'Off'}</span>
+        </button>
         <button type="button" disabled={notify}
           onClick={async () => setNotify(await requestNotifications())}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2.5 text-[12px] font-semibold ring-1 ring-line hover:ring-white/20 disabled:text-ok">

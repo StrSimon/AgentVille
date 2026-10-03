@@ -19,12 +19,13 @@ export type Pose = 'walk' | 'work' | 'alert' | 'bored' | 'idle' | 'sleep';
 
 const HEIGHT = 56;
 
-/** Pick the clan's painted textures (custom agents borrow the Codex look, tinted). */
-export function paintedTextures(sprites: SpriteSet, source: Source): PaintedTextures | null {
-  const clan = source === 'claude' ? 'claude' : 'codex';
-  const stand = sprites[`dwarf-${clan}-stand`];
-  const walk = sprites[`dwarf-${clan}-walk`] || stand;
-  const sit = sprites[`dwarf-${clan}-sit`] || stand;
+/** Painted textures for a look (see lib/variant); falls back to the clan's base look. */
+export function paintedTextures(sprites: SpriteSet, look: string): PaintedTextures | null {
+  const base = look.startsWith('claude') ? 'claude' : 'codex';
+  const key = sprites[`dwarf-${look}-stand`] ? look : base;
+  const stand = sprites[`dwarf-${key}-stand`];
+  const walk = sprites[`dwarf-${key}-walk`] || stand;
+  const sit = sprites[`dwarf-${key}-sit`] || stand;
   return stand ? { stand, walk, sit } : null;
 }
 

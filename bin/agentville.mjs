@@ -128,6 +128,19 @@ switch (cmd) {
     printStatus();
     console.log(`  ${'Village'.padEnd(12)} ${(await running()) ? c.green('● running') : c.dim('stopped')}`);
     break;
+  case 'merge-project': {
+    // agentville merge-project <from> <to> — fold a sub-folder "project" into its repository
+    const [, from, to] = args.filter(a => !a.startsWith('-'));
+    if (await running()) { console.log(c.amber('  Quit AgentVille first, then run this again.')); break; }
+    const { paths, loadData, writeJSON } = await import('../server/store.mjs');
+    const { mergeProject } = await import('../server/core/profiles.mjs');
+    const p = paths();
+    const { data } = loadData(p);
+    mergeProject(data, from, to);
+    writeJSON(p.data, data);
+    console.log(`  ${c.green('✔')} merged “${from}” into “${to}”`);
+    break;
+  }
   case 'version':
     console.log(VERSION);
     break;

@@ -14,7 +14,8 @@ export interface TimelineEntry {
 export interface Toast {
   id: number;
   ts: number;
-  kind: 'achievement' | 'level' | 'building-level' | 'failure';
+  kind: 'achievement' | 'level' | 'building-level' | 'failure' | 'warning';
+  severity?: 'high' | 'critical';
   text: string;
 }
 
@@ -41,7 +42,7 @@ export const initialState: VillageState = {
 };
 
 const TIMELINE_MAX = 120;
-const TOAST_KINDS = new Set(['achievement', 'level', 'building-level']);
+const TOAST_KINDS = new Set(['achievement', 'level', 'building-level', 'warning']);
 let seq = 0;
 
 function describe(e: FxEvent, agents: Record<string, Agent>): string {
@@ -97,7 +98,7 @@ export function reduce(state: VillageState, msg: ServerMessage): VillageState {
       const entry: TimelineEntry = { id: ++seq, ts: msg.ts, agentId: msg.agentId, kind: msg.kind, text, activity: msg.activity };
       const timeline = [entry, ...state.timeline].slice(0, TIMELINE_MAX);
       const toasts = TOAST_KINDS.has(msg.kind)
-        ? [...state.toasts, { id: entry.id, ts: msg.ts, kind: msg.kind as Toast['kind'], text }].slice(-4)
+        ? [...state.toasts, { id: entry.id, ts: msg.ts, kind: msg.kind as Toast['kind'], text, severity: msg.severity }].slice(-4)
         : state.toasts;
       return { ...state, timeline, toasts };
     }

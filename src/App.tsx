@@ -35,6 +35,7 @@ export function App() {
   const [overlay, setOverlay] = useState<Overlay>('none');
   const [timeMode, setTimeModeState] = useState<TimeMode>(() => (localStorage.getItem('agentville-time') as TimeMode) || 'auto');
   const focusFn = useRef<(id: string) => void>(() => {});
+  const [weatherPreview, setWeatherPreview] = useState<number | null>(null);
 
   const start = useCallback((mode: Mode) => {
     setController(prev => {
@@ -75,7 +76,8 @@ export function App() {
   const api: AppApi | null = useMemo(() => controller && ({
     controller, mode: controller.mode, hosted, selectedId, select, focus, overlay, setOverlay,
     timeMode, setTimeMode, switchMode: (m: Mode) => { if (m !== controller.mode) start(m); },
-  }), [controller, hosted, selectedId, select, focus, overlay, timeMode, setTimeMode, start]);
+    weatherPreview, setWeatherPreview,
+  }), [controller, hosted, selectedId, select, focus, overlay, timeMode, setTimeMode, start, weatherPreview]);
 
   if (!api) {
     return <div className="grid h-full place-items-center font-display text-xl text-muted">Gathering the dwarves…</div>;
@@ -88,6 +90,7 @@ export function App() {
           key={api.mode}
           selectedId={selectedId}
           timeMode={timeMode}
+          weatherPreview={weatherPreview}
           onSelect={select}
           onBuilding={(id) => { setBuilding(id); setSelectedId(null); }}
           registerFocus={registerFocus}

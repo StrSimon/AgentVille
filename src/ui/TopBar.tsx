@@ -1,5 +1,6 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { Gauge, Pickaxe, Settings, Users, Volume2, VolumeX } from 'lucide-react';
+import { CloudLightning, CloudRain, Cloudy, Gauge, Pickaxe, Settings, Sun, Users, Volume2, VolumeX } from 'lucide-react';
+import { computeMood, weatherFor } from '../lib/mood';
 import { useVillage } from '../state/store';
 import { connectionStore } from '../state/controller';
 import { money, windowLabel } from '../lib/format';
@@ -44,6 +45,11 @@ export function TopBar() {
   const c = useMemo(() => counts(agents), [agents]);
   const [muted, setMuted] = useState(!sound.enabled);
   const burn = stats?.burn;
+  const { weatherPreview } = useApp();
+  const mood = useMemo(() => computeMood(stats), [stats]);
+  const weather = weatherPreview !== null ? weatherFor(weatherPreview) : mood.weather;
+  const WeatherIcon = { clear: Sun, cloudy: Cloudy, rain: CloudRain, storm: CloudLightning }[weather];
+  const weatherText = { clear: 'Clear skies', cloudy: 'Clouds gathering', rain: 'Rain — getting tight', storm: 'Storm — limit is near' }[weather];
   const limits = stats?.limits || {};
 
   return (
@@ -83,6 +89,10 @@ export function TopBar() {
             <span className="text-sm font-semibold tabular-nums text-ember-soft">{money(burn.perHour)}<span className="text-muted">/h</span></span>
           </span>
           {Object.entries(limits).map(([src, l]) => l && <LimitChip key={src} source={src} limits={l} />)}
+          <span className="flex items-center gap-1.5 border-l border-line pl-4" title={`${weatherText} · ${weatherPreview !== null ? 'preview' : mood.reason}`}>
+            <WeatherIcon size={18} className={weather === 'storm' ? 'text-alert' : weather === 'rain' ? 'text-sky-300' : weather === 'cloudy' ? 'text-slate-300' : 'text-ember-soft'} />
+            <span className="text-[10px] leading-tight text-muted">{weatherText.split(' — ')[0]}</span>
+          </span>
         </button>
       )}
 

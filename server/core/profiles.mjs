@@ -27,6 +27,7 @@ export function migrateData(data) {
   d.buildings ||= {};
   d.cursors ||= {};
   d.orders ||= {};
+  d.alerts ||= {};
   d.stats ||= {};
   d.limits ||= {};
   d.stats.daily ||= {};
@@ -290,4 +291,21 @@ export function statsDTO(data, now) {
 
 function total(v) {
   return Object.values(v).reduce((sum, s) => sum + (typeof s === 'object' ? s.cost || 0 : 0), 0);
+}
+
+/** Merge all stats and residents of project `from` into project `to`. */
+export function mergeProject(data, from, to) {
+  if (!from || !to || from === to) return false;
+  const projects = data.stats.projects;
+  const src = projects[from];
+  if (src) {
+    const dst = (projects[to] ||= {});
+    for (const [source, v] of Object.entries(src)) {
+      const d = (dst[source] ||= { cost: 0, tokens: 0, toolCalls: 0 });
+      d.cost += v.cost || 0; d.tokens += v.tokens || 0; d.toolCalls += v.toolCalls || 0;
+    }
+    delete projects[from];
+  }
+  for (const p of Object.values(data.agents)) if (p.clan === from) p.clan = to;
+  return true;
 }

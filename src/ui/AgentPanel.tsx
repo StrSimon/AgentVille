@@ -7,6 +7,7 @@ import { ACTIVITY_META } from './activity-meta';
 import { useApp } from './app-context';
 import { OrderBox } from './OrderBox';
 import { Meter, SourceBadge, SOURCE_HEX } from './widgets';
+import { portraitUrl } from '../lib/variant';
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
@@ -53,8 +54,12 @@ export function AgentPanel() {
 
   return (
     <aside className="panel animate-rise absolute top-[84px] right-3 bottom-24 z-10 flex w-[350px] flex-col overflow-hidden rounded-2xl" aria-label={`${agent.name} details`}>
-      <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${SOURCE_HEX[agent.source]}, transparent)` }} />
-      <div className="scroll-thin flex-1 overflow-y-auto p-4">
+      <div className="relative h-36 w-full shrink-0 overflow-hidden">
+        <img src={portraitUrl(agent)} alt="" className={`h-full w-full object-cover object-[50%_25%] ${agent.online ? '' : 'grayscale-[60%] opacity-70'}`} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--color-panel)]" />
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${SOURCE_HEX[agent.source]}, transparent)` }} />
+      </div>
+      <div className="scroll-thin -mt-10 flex-1 overflow-y-auto p-4 pt-0">
         <header className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">

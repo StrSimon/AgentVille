@@ -3,6 +3,7 @@ import type { Agent } from '../types';
 import { buildDwarf, TOOL_FOR, type DwarfParts, type Tool } from './dwarf-art';
 import { animatePainted, buildPaintedDwarf, paintedTextures, type PaintedParts } from './dwarf-painted';
 import type { SpriteSet } from './sprites';
+import { dwarfLook } from '../lib/variant';
 import { hash, type Pt } from './iso';
 import { SOURCE_COLOR } from './layout';
 import { bored, clock, needs, speak, story } from './phrases';
@@ -69,9 +70,9 @@ export class DwarfView {
 
   /** Painted sprite when the clan's art exists, otherwise the procedural dwarf. */
   private build(agent: Agent): DwarfParts | PaintedParts {
-    const textures = paintedTextures(this.sprites, agent.source);
+    const textures = paintedTextures(this.sprites, dwarfLook(agent));
     return textures
-      ? buildPaintedDwarf(textures, agent.source, agent.kind === 'sub')
+      ? buildPaintedDwarf(textures, agent.source, false)
       : buildDwarf(agent.id, agent.source, agent.level, agent.kind === 'sub');
   }
 

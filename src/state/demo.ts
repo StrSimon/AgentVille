@@ -39,6 +39,11 @@ function seedData() {
       codex: { cost: (0.2 + Math.random() * 0.9) * work, tokens: 2e5 * work, toolCalls: 30 },
     };
   }
+  // A lived-in village: some buildings already upgraded (level 4+ / 7+ show grander art)
+  const built = { forge: 26_000, guild: 11_000, library: 2_200, townhall: 4_500, arena: 1_700, tower: 1_600, tavern: 600, post: 400 };
+  for (const [id, toolCalls] of Object.entries(built)) {
+    data.buildings[id] = { toolCalls, totalInputBytes: 0, totalOutputBytes: 0, uniqueVisitors: [], totalVisits: 0, firstActivity: now, lastActivity: now };
+  }
   data.stats.projects = {
     storefront: { claude: { cost: 212, tokens: 8e7, toolCalls: 5200 } },
     'payments-api': { codex: { cost: 88, tokens: 4e7, toolCalls: 2900 } },
@@ -90,6 +95,8 @@ export function createDemoController(): Controller {
   const pending = new Map<string, unknown[]>();
   const village = createVillage({
     data: seedData(),
+    // demo sessions are scripted: only leashed dwarves wait for orders
+    settings: { ordersMode: 'leash' },
     emit: (msg: ServerMessage) => store.dispatch(msg),
     hasViewers: () => true,
     readTranscript: (path: string) => pending.get(path)?.splice(0) ?? [],

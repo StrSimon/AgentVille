@@ -114,6 +114,17 @@ describe('bridge API', () => {
   });
 });
 
+describe('projects', () => {
+  it('should group sessions by git repository, not sub-folder', async () => {
+    const repo = path.join(TMP, 'MyRepo');
+    fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+    fs.mkdirSync(path.join(repo, 'app', 'src'), { recursive: true });
+    await post('/api/hook', { source: 'claude', event: 'SessionStart', session_id: 'proj1', cwd: path.join(repo, 'app', 'src'), project: 'src' });
+    const state = await (await fetch(`${BASE}/api/state`)).json();
+    assert.ok(state.agents.some(a => a.online && a.project === 'MyRepo'));
+  });
+});
+
 describe('hook process end-to-end', () => {
   it('should forward a Codex shell command', async () => {
     const r = await runHook('codex', { hook_event_name: 'PreToolUse', session_id: 'cx1', cwd: '/w/api', tool_name: 'Bash', tool_input: { command: 'npm test' }, model: 'gpt-5.5' });

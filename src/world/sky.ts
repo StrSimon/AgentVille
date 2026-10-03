@@ -24,8 +24,18 @@ function lerpColor(a: number, b: number, t: number): string {
   return `rgb(${c(16)}, ${c(8)}, ${c(0)})`;
 }
 
-/** CSS gradient for the sky behind the canvas. */
-export function skyGradient(night: number): string {
+const STORM = [0x4b5466, 0x8c96a6];
+
+/** CSS gradient for the sky behind the canvas; `storm` greys it out (0..1). */
+export function skyGradient(night: number, storm = 0): string {
+  if (storm > 0.02) {
+    const k = storm * (1 - night * 0.6);
+    const top = lerpColor(DAY_TOP[0], NIGHT_TOP[0], night).match(/\d+/g)!.map(Number);
+    const bottom = lerpColor(DAY_TOP[1], NIGHT_TOP[1], night).match(/\d+/g)!.map(Number);
+    const mixc = (rgb: number[], to: number) => rgb.map((c, i) => Math.round(c + (((to >> (16 - i * 8)) & 255) - c) * k));
+    const [a, b] = [mixc(top, STORM[0]), mixc(bottom, STORM[1])];
+    return `linear-gradient(180deg, rgb(${a.join(',')}) 0%, rgb(${b.join(',')}) 100%)`;
+  }
   const duskK = 1 - Math.abs(night - 0.45) / 0.45;
   const blend = (i: number) => {
     const base = lerpColor(DAY_TOP[i], NIGHT_TOP[i], night);

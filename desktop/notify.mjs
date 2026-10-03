@@ -68,5 +68,13 @@ export function createNotifier({ isWindowFocused, showWindow, respond }) {
     })) lastDone.set(agent.id, t);
   }
 
-  return { requestOpened, requestClosed, agentDone };
+  /** Limits getting tight or an unusual burn rate. */
+  function warning(fx) {
+    show(`warn:${fx.ts}`, {
+      title: fx.severity === 'critical' ? '⛈ AgentVille: limit almost reached' : '🌧 AgentVille warning',
+      body: clip(fx.text || ''),
+    });
+  }
+
+  return { requestOpened, requestClosed, agentDone, warning };
 }

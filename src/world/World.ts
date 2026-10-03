@@ -15,6 +15,7 @@ import { ShadowLayer, type TreeCaster } from './shadows';
 import { Clouds, LightGrade } from './atmosphere';
 import { loadSprites, type SpriteSet } from './sprites';
 import { usePaintedGround } from './textures';
+import { WeatherFx } from './weather';
 import { LightLayer, nightFactor, skyGradient, Stars, type TimeMode } from './sky';
 
 export interface WorldCallbacks {
@@ -45,6 +46,7 @@ export class World {
   private clouds = new Clouds();
   private grade = new LightGrade();
   private tethers = new Graphics();
+  readonly weather = new WeatherFx();
   private sprites: SpriteSet = {};
   private lanterns: Array<{ x: number; y: number }> = [];
   private selected: string | null = null;
@@ -80,7 +82,7 @@ export class World {
     this.world.addChild(this.water, this.shadows.container, this.clouds.ground, this.entities, this.tethers, this.particles.container, this.clouds.sky);
 
     for (const def of BUILDINGS) {
-      const view = new BuildingView(def, () => this.onBuildingRebuilt(), sprites[def.id]);
+      const view = new BuildingView(def, () => this.onBuildingRebuilt(), sprites);
       view.root.on('pointertap', (e) => {
         e.stopPropagation();
         if (!this.camera.dragged) this.cb.onSelectBuilding(def.id);
@@ -103,7 +105,7 @@ export class World {
     });
     this.onBuildingRebuilt();
 
-    this.app.stage.addChild(this.stars.container, this.world, this.night, this.grade.container, this.lights.container, this.labels);
+    this.app.stage.addChild(this.stars.container, this.world, this.night, this.grade.container, this.lights.container, this.labels, this.weather.flash);
     this.camera = new Camera(this.app, [this.world, this.lights.container, this.labels]);
     this.app.stage.on('pointertap', () => { if (!this.camera.dragged) this.cb.onSelectAgent(null); });
     this.fit(true);
@@ -273,15 +275,19 @@ export class World {
     this.camera.update(dt);
     if (Math.floor(t * 2) !== Math.floor((t - dt) * 2)) {
       this.nightK = nightFactor(new Date(), this.timeMode);
-      this.el.style.background = skyGradient(this.nightK);
+      this.el.style.background = skyGradient(this.nightK, this.weather.level);
     }
     const { width, height } = this.app.screen;
-    this.night.clear().rect(0, 0, width, height).fill({ color: 0x0a1238, alpha: this.nightK * 0.52 });
+    const storm = this.weather.level;
+    const darkness = 1 - (1 - this.nightK * 0.52) * (1 - storm * 0.45);
+    this.night.clear().rect(0, 0, width, height).fill({ color: storm > this.nightK ? 0x1c2433 : 0x0a1238, alpha: darkness });
+    this.weather.update(dt, t, this.particles, width, height);
     this.stars.update(t, this.nightK);
     this.grade.layout(width, height);
-    this.grade.update(this.nightK);
+    this.grade.update(this.nightK, storm);
     this.shadows.update(this.nightK);
-    this.clouds.update(dt, this.nightK);
+    this.shadows.container.alpha *= 1 - storm * 0.75;
+    this.clouds.update(dt, this.nightK, storm);
     const gust = Math.sin(t * 0.35) * 0.5 + 0.5;
     for (const v of this.sway) v.canopy!.skew.x = Math.sin(t * 1.3 + v.phase) * (0.02 + gust * 0.03);
 

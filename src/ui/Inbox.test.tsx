@@ -17,6 +17,7 @@ function setup() {
   const api = {
     controller, mode: 'demo', hosted: false, selectedId: null, select: vi.fn(), focus: vi.fn(),
     overlay: 'none', setOverlay: vi.fn(), timeMode: 'auto', setTimeMode: vi.fn(), switchMode: vi.fn(),
+    weatherPreview: null, setWeatherPreview: vi.fn(),
   } as AppApi;
   render(<AppContext.Provider value={api}><Inbox /></AppContext.Provider>);
   return { controller, api };

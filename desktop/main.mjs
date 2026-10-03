@@ -54,6 +54,7 @@ function onEvent(msg) {
   if (fx.opened) notifier.requestOpened(fx.opened);
   if (fx.closedId) notifier.requestClosed(fx.closedId);
   if (fx.done) notifier.agentDone(fx.done);
+  if (msg?.type === 'fx' && msg.kind === 'warning') notifier.warning(msg);
   if (msg?.type === 'snapshot' || msg?.type === 'agent' || fx.opened || fx.closedId) scheduleUi();
 }
 

@@ -15,6 +15,7 @@ import { integrationStatus, installIntegrations, uninstallIntegrations } from '.
 import { parseClaudeLimits } from './core/usage.mjs';
 import { latestCodexLimits } from './codex-limits.mjs';
 import { readSessionMeta } from './store.mjs';
+import { projectFromCwd } from './projects.mjs';
 
 export const VERSION = JSON.parse(fs.readFileSync(path.join(PACKAGE_DIR, 'package.json'), 'utf8')).version;
 
@@ -142,7 +143,13 @@ export async function startServer(opts = {}) {
   }
 
   const routes = {
-    'POST /api/hook': { control: false, run: async (body) => ({ ok: true, output: await village.handleHook(body) }) },
+    'POST /api/hook': {
+      control: false,
+      run: async (body) => {
+        if (body.cwd) body.project = projectFromCwd(body.cwd) || body.project;
+        return { ok: true, output: await village.handleHook(body) };
+      },
+    },
     'POST /api/statusline': {
       control: false,
       run: (body) => {

@@ -455,3 +455,51 @@ describe('automation sessions (claude -p, codex exec)', () => {
     assert.equal(v.online().length, 0);
   });
 });
+
+describe('warnings', () => {
+  const limits = (pct, resetsAt = 1_750_009_000_000) => ({ plan: 'max', windows: [{ usedPercent: pct, windowMinutes: 300, resetsAt }], credits: null, reached: null });
+
+  it('should warn once when a limit crosses 80 % and again at 95 %', () => {
+    const v = setup();
+    v.village.setLimits('claude', limits(50));
+    v.village.setLimits('claude', limits(82));
+    v.village.setLimits('claude', limits(84));
+    v.village.setLimits('claude', limits(96));
+    const warnings = v.fxs('warning');
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[0].text, /Claude 5-hour limit at 82%/);
+    assert.equal(warnings[1].severity, 'critical');
+  });
+
+  it('should warn again after the window resets', () => {
+    const v = setup();
+    v.village.setLimits('codex', limits(85, 1));
+    v.village.setLimits('codex', limits(85, 2));
+    assert.equal(v.fxs('warning').length, 2);
+  });
+
+  it('should warn about an unusual burn rate', async () => {
+    const transcripts = { '/t/hot.jsonl': [
+      { type: 'assistant', message: { id: 'h1', model: 'claude-opus-5-5', usage: { input_tokens: 2_000_000, output_tokens: 0 } } },
+    ] };
+    const v = setup({ transcripts });
+    await v.village.handleHook(hook('Stop', { transcript_path: '/t/hot.jsonl' }));
+    v.advance(61_000);
+    v.village.tick();
+    assert.ok(v.fxs('warning').some(w => /Burning/.test(w.text)));
+  });
+});
+
+describe('mergeProject', () => {
+  it('should fold a sub-folder project into its repository', async () => {
+    const { mergeProject, emptyData } = await import('./profiles.mjs');
+    const d = emptyData();
+    d.stats.projects.app = { claude: { cost: 2, tokens: 10, toolCalls: 3 } };
+    d.stats.projects.NewSurvivor = { claude: { cost: 1, tokens: 5, toolCalls: 1 } };
+    d.agents.x = { name: 'X', clan: 'app' };
+    mergeProject(d, 'app', 'NewSurvivor');
+    assert.deepEqual(d.stats.projects.NewSurvivor.claude, { cost: 3, tokens: 15, toolCalls: 4 });
+    assert.equal(d.stats.projects.app, undefined);
+    assert.equal(d.agents.x.clan, 'NewSurvivor');
+  });
+});
