@@ -8,7 +8,7 @@ function setup({ viewers = true, settings, data, transcripts = {} } = {}) {
   const events = [];
   const village = createVillage({
     data,
-    settings,
+    settings: { ordersMode: 'off', ...settings },
     now: () => t,
     emit: (m) => events.push(m),
     hasViewers: () => viewers,
@@ -201,6 +201,7 @@ describe('remote control', () => {
   });
 
   it('should keep a leashed dwarf waiting in the village until it gets orders', async () => {
+    v.village.updateSettings({ ordersMode: 'leash' });
     await v.village.handleHook(hook('UserPromptSubmit'));
     const id = v.online()[0].id;
     v.village.setLeash(id, true);
@@ -331,5 +332,77 @@ describe('backfill', () => {
     assert.equal(burn.last24.cost, 1);
     assert.equal(burn.hours[burn.hours.length - 1].cost, 0, 'current hour stays clean');
     assert.equal(burn.hours[burn.hours.length - 3].cost, 1);
+  });
+});
+
+describe('crew-aware waiting', () => {
+  it('should not ask for the user while sub-agents are still working', async () => {
+    const v = setup();
+    await v.village.handleHook(hook('UserPromptSubmit'));
+    await v.village.handleHook(hook('SubagentStart', { agent_id: 'bg1', agent_type: 'Explore' }));
+    await v.village.handleHook(hook('Stop'));
+    const main = v.online().find(a => a.kind === 'main');
+    assert.equal(main.attention, null, 'not waiting for the user yet');
+    assert.equal(main.activity, 'delegating');
+    assert.match(main.detail, /1 helper/);
+
+    await v.village.handleHook(hook('SubagentStop', { agent_id: 'bg1', agent_type: 'Explore' }));
+    const after = v.online().find(a => a.kind === 'main');
+    assert.equal(after.attention.kind, 'done', 'now it really waits for you');
+  });
+
+  it('should stay busy if the session resumed before the helper finished', async () => {
+    const v = setup();
+    await v.village.handleHook(hook('SubagentStart', { agent_id: 'bg2', agent_type: 'Explore' }));
+    await v.village.handleHook(hook('Stop'));
+    await v.village.handleHook(hook('UserPromptSubmit'));
+    await v.village.handleHook(hook('SubagentStop', { agent_id: 'bg2', agent_type: 'Explore' }));
+    const main = v.online().find(a => a.kind === 'main');
+    assert.equal(main.attention, null);
+  });
+});
+
+describe('orders reach idle Claude sessions', () => {
+  it('should keep a finished Claude dwarf waiting for village orders by default', async () => {
+    const v = setup({ settings: { ordersMode: 'auto' } });
+    await v.village.handleHook(hook('UserPromptSubmit'));
+    const pending = v.village.handleHook(hook('Stop'));
+    await flush();
+    const dwarf = v.online()[0];
+    assert.equal(dwarf.attention.leashed, true);
+    v.village.sendOrder(dwarf.id, 'Bitte auch die Doku anpassen');
+    const out = await pending;
+    assert.equal(out.decision, 'block');
+    assert.match(out.reason, /Doku anpassen/);
+    assert.match(out.systemMessage, /AgentVille/);
+    assert.match(out.systemMessage, /Doku anpassen/);
+  });
+
+  it('should release the hold as soon as the user types in the terminal', async () => {
+    const v = setup({ settings: { ordersMode: 'auto' } });
+    const pending = v.village.handleHook(hook('Stop'));
+    await flush();
+    await v.village.handleHook(hook('UserPromptSubmit'));
+    assert.equal(await pending, undefined);
+    assert.equal(v.village.snapshot().requests.length, 0);
+  });
+
+  it('should not hold Codex sessions unless leashed', async () => {
+    const v = setup({ settings: { ordersMode: 'auto' } });
+    const out = await v.village.handleHook(hook('Stop', { source: 'codex', session_id: 'cx' }));
+    assert.equal(out, undefined);
+  });
+
+  it('should not hold when orders mode is off', async () => {
+    const v = setup({ settings: { ordersMode: 'off' } });
+    assert.equal(await v.village.handleHook(hook('Stop')), undefined);
+  });
+
+  it('should show delivered mid-task orders to the user too', async () => {
+    const v = setup();
+    await v.village.handleHook(hook('PreToolUse', { tool_name: 'Read', tool_input: { file_path: '/a.ts' } }));
+    v.village.sendOrder(v.online()[0].id, 'Tabs statt Spaces');
+    const out = await v.village.handleHook(hook('PostToolUse', { tool_name: 'Read' }));
+    assert.match(out.systemMessage, /Tabs statt Spaces/);
   });
 });

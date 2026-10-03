@@ -45,11 +45,18 @@ export function stripHooks(hooks = {}) {
   return out;
 }
 
+const STATUS = {
+  Stop: '⛏ AgentVille: waiting for orders from the village — just type here to continue',
+  PermissionRequest: '⛏ AgentVille: asking the village — answer there or wait for the prompt',
+};
+
 /** Add AgentVille handlers for the given events. */
 export function addHooks(hooks, command, events) {
   const out = stripHooks(hooks);
   for (const [event, timeout] of Object.entries(events)) {
-    out[event] = [...(out[event] || []), { hooks: [{ type: 'command', command, timeout }] }];
+    const handler = { type: 'command', command, timeout };
+    if (STATUS[event]) handler.statusMessage = STATUS[event];
+    out[event] = [...(out[event] || []), { hooks: [handler] }];
   }
   return out;
 }

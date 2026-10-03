@@ -7,14 +7,15 @@ import {
   migrateData, createProfile, recordToolCall, recordBytes, recordBuilding,
   agentDTO, buildingDTO, statsDTO, agentLevel, pushRecent,
 } from './profiles.mjs';
-import { createControl, orderContextOutput, stopWithOrdersOutput } from './control.mjs';
+import { createControl, orderContextOutput, ordersNotice, stopWithOrdersOutput } from './control.mjs';
 import { createTranscriptWatcher } from './transcripts.mjs';
 import { createCommands } from './commands.mjs';
 
 export const DEFAULT_SETTINGS = {
   approvalMode: 'both',     // 'both' | 'village' | 'terminal'
   approvalWaitSec: 45,      // 'both': wait this long for the village before the terminal asks
-  leashWaitMin: 30,         // how long a leashed dwarf waits in the village for new orders
+  ordersMode: 'auto',       // 'auto': idle Claude sessions wait for village orders while the village is open | 'leash' | 'off'
+  leashWaitMin: 45,         // how long an idle dwarf waits in the village for new orders
   mainTimeoutMin: 180,      // main dwarves go home after this much silence
   subTimeoutMin: 15,
 };
@@ -225,6 +226,9 @@ export function createVillage(opts = {}) {
         break;
 
       case 'UserPromptSubmit':
+        // The user typed in the terminal: release a session that was waiting for village orders.
+        control.cancelWhere(r => r.agentId === mainId && r.kind === 'orders', 'terminal-input');
+        runtime(mainId).awaitingCrew = false;
         setAttention(mainId, null);
         runtime(mainId).busy = true;
         setActivity(mainId, 'planning', 'new orders');
@@ -272,6 +276,7 @@ export function createVillage(opts = {}) {
         ingestFor(actor, false);
         const orders = takeOrders(actor);
         if (orders) output = orderContextOutput('PostToolUse', orders);
+        if (orders) output.systemMessage = ordersNotice(orders);
         break;
       }
 
@@ -311,6 +316,13 @@ export function createVillage(opts = {}) {
           goHome(subId, 'errand done');
           bindings.delete(key);
         }
+        // The parent finished its turn earlier and only waited for this crew — now it waits for you.
+        const prt = runtime(mainId);
+        if (prt.awaitingCrew && !prt.busy && activeCrew(p) === 0) {
+          prt.awaitingCrew = false;
+          setAttention(mainId, { kind: 'done', text: 'done — waiting for your reply' });
+          setActivity(mainId, 'waiting', '');
+        }
         break;
       }
 
@@ -319,17 +331,27 @@ export function createVillage(opts = {}) {
         const mrt = runtime(mainId);
         mrt.busy = false;
         let orders = takeOrders(mainId);
-        if (!orders && mrt.leash && !p.stop_hook_active) {
+        // Holding the Stop hook doesn't block the terminal (verified: typing there is accepted
+        // immediately), so idle Claude sessions wait in the village where orders can reach them.
+        const autoHold = settings.ordersMode === 'auto' && p.source === 'claude' && hasViewers();
+        const hold = settings.ordersMode !== 'off' && (mrt.leash || autoHold) && activeCrew(p) === 0;
+        if (!orders && hold) {
           setAttention(mainId, { kind: 'done', text: 'waiting for orders in the village', leashed: true });
           setActivity(mainId, 'waiting', '');
           pushAgent(mainId);
           orders = await waitForOrders(mainId, p);
         }
+        const crew = activeCrew(p);
         if (orders) {
           setAttention(mainId, null);
           mrt.busy = true;
           setActivity(mainId, 'planning', 'new orders');
-          output = stopWithOrdersOutput(orders);
+          output = stopWithOrdersOutput(orders, p.source);
+        } else if (crew > 0) {
+          // Background sub-agents are still working: the dwarf waits for its crew, not for you.
+          mrt.awaitingCrew = true;
+          setAttention(mainId, null);
+          setActivity(mainId, 'delegating', `waiting for ${crew} helper${crew > 1 ? 's' : ''}`);
         } else {
           setAttention(mainId, { kind: 'done', text: 'done — waiting for your reply' });
           setActivity(mainId, 'waiting', '');
@@ -360,6 +382,14 @@ export function createVillage(opts = {}) {
     if (actor !== mainId) pushAgent(mainId);
     changed();
     return output;
+  }
+
+  /** Sub-agents of this session that are still out working. */
+  function activeCrew(p) {
+    const prefix = `${p.source}:${p.session_id}:`;
+    let n = 0;
+    for (const [k, id] of bindings) if (k.startsWith(prefix) && rts.get(id)?.online) n++;
+    return n;
   }
 
   function goHome(id, why) {

@@ -10,7 +10,8 @@ export function OrderBox({ agent, compact = false }: { agent: Agent; compact?: b
   const [sent, setSent] = useState(false);
   const leashed = agent.leash;
   const done = agent.attention?.kind === 'done';
-  const deliverable = agent.busy || leashed;
+  const waitingHere = !!agent.attention?.leashed;
+  const deliverable = agent.busy || leashed || waitingHere;
 
   const send = async () => {
     if (!text.trim()) return;
@@ -21,7 +22,9 @@ export function OrderBox({ agent, compact = false }: { agent: Agent; compact?: b
     }
   };
 
-  const hint = leashed
+  const hint = waitingHere
+    ? 'Waiting here — your orders start it right away and show up in its terminal.'
+    : leashed
     ? done ? 'Waiting in the village — orders start it right away.' : 'Will wait in the village for orders after this task.'
     : agent.busy ? 'Delivered with its next tool call.'
       : 'Idle in its terminal — orders wait until it acts again. Turn on “Wait for orders” to command it from here.';

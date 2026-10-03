@@ -93,8 +93,14 @@ export function orderContextOutput(event, orders) {
   };
 }
 
+/** Continue a stopped session with the orders; `systemMessage` shows them in the user's terminal. */
 export function stopWithOrdersOutput(orders) {
-  return { decision: 'block', reason: formatOrders(orders) };
+  return { decision: 'block', reason: formatOrders(orders), systemMessage: ordersNotice(orders) };
+}
+
+/** Short, user-visible line for the terminal. */
+export function ordersNotice(orders) {
+  return `⛏ Orders from AgentVille: ${orders.map(o => `“${o}”`).join(' · ')}`;
 }
 
 export function formatOrders(orders) {

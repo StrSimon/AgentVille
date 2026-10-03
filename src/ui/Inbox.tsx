@@ -46,7 +46,7 @@ function Card({ agent, request, now }: { agent: Agent; request?: PendingRequest;
       )}
       {!blocking && (
         <>
-          <p className="mt-2 text-[12px] text-parchment/75">{att.leashed ? 'Finished and waiting here for your next orders.' : 'Finished its task — waiting for your reply.'}</p>
+          <p className="mt-2 text-[12px] text-parchment/75">{att.leashed ? 'Finished — waiting for your next orders. Type here or in its terminal.' : 'Finished its task — waiting for your reply in its terminal.'}</p>
           <OrderBox agent={agent} compact />
         </>
       )}

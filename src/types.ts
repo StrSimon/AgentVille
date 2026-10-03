@@ -141,6 +141,7 @@ export interface Stats {
 export interface Settings {
   approvalMode: 'both' | 'village' | 'terminal';
   approvalWaitSec: number;
+  ordersMode: 'auto' | 'leash' | 'off';
   leashWaitMin: number;
   mainTimeoutMin: number;
   subTimeoutMin: number;

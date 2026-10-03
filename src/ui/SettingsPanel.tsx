@@ -83,6 +83,25 @@ export function SettingsPanel() {
           </>
         )}
 
+        {settings && (
+          <>
+            <h3 className="eyebrow mt-6 mb-2">Orders from the village</h3>
+            <div className="grid gap-1.5" role="radiogroup" aria-label="Orders">
+              {([
+                ['auto', 'Always reachable', 'Finished Claude sessions wait here for your orders. Typing in the terminal still works instantly.'],
+                ['leash', 'Only when I choose', 'Only dwarves with “Wait for orders” switched on wait in the village.'],
+                ['off', 'Off', 'Orders are only delivered while a dwarf is busy.'],
+              ] as const).map(([value, label, hint]) => (
+                <button key={value} type="button" role="radio" aria-checked={settings.ordersMode === value} onClick={() => save({ ordersMode: value })}
+                  className={`rounded-xl px-3 py-2.5 text-left ring-1 transition ${settings.ordersMode === value ? 'bg-ember/12 ring-ember/60' : 'bg-white/[0.02] ring-line hover:ring-white/20'}`}>
+                  <span className="text-[13px] font-semibold">{label}</span>
+                  <span className="block text-[11px] text-muted">{hint}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         <h3 className="eyebrow mt-6 mb-2">Village</h3>
         <div className="flex gap-1.5" role="radiogroup" aria-label="Time of day">
           {([['auto', 'Real time', SunMoon], ['day', 'Always day', Sun], ['night', 'Always night', Moon]] as const).map(([v, label, Icon]) => (
