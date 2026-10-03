@@ -8,3 +8,6 @@ _archive/
 .env.*
 .DS_Store
 .claude/data/
+release/
+build/preview/
+.playwright-cli/
