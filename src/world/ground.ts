@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { iso, rng, shade, TH, TW } from './iso';
 import { MAT, paintFace } from './materials';
 import { GRID, insideIsland } from './layout';
@@ -9,7 +9,7 @@ const WATER = 0x2f6f9f;
 const CLIFF_H = 54;
 
 /** Static ground: island tiles, cliffs, roads, pond and the mountain. Cached as a texture. */
-export function buildGround(paths: Set<string>): Container {
+export function buildGround(paths: Set<string>, mountains?: Texture): Container {
   const root = new Container({ label: 'ground' });
   const cliffs = new Graphics();
   const tiles = new Graphics();
@@ -87,8 +87,18 @@ export function buildGround(paths: Set<string>): Container {
   const plaza = iso(15.5, 15);
   detail.ellipse(plaza.x, plaza.y, TW * 2.6, TH * 2.6).fill({ color: 0xffe2b0, alpha: 0.05 });
 
-  root.addChild(cliffs, tiles, detail, buildMountain());
+  root.addChild(cliffs, tiles, detail, mountains ? paintedMountains(mountains) : buildMountain());
   return root;
+}
+
+/** Painted mountain backdrop behind the mine. */
+function paintedMountains(tex: Texture): Sprite {
+  const s = new Sprite(tex);
+  s.anchor.set(0.5, 0.72);
+  s.scale.set(400 / tex.width);
+  const p = iso(2.4, 5.2);
+  s.position.set(p.x, p.y);
+  return s;
 }
 
 /** Rocky hill behind the mine (north-west corner). */

@@ -11,3 +11,4 @@ _archive/
 release/
 build/preview/
 .playwright-cli/
+art/source/

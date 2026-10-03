@@ -27,7 +27,7 @@ export const BUILDINGS: BuildingDef[] = [
   { id: 'tavern', name: 'The Tavern', blurb: 'Resting residents between sessions', activities: [], gx: 13, gy: 22, w: 3, d: 3, glow: 0xfbbf24 },
   { id: 'well', name: 'Well of Memory', blurb: 'Compacting context & memories', activities: ['remembering'], gx: 10, gy: 18, w: 1, d: 1, glow: 0x67e8f9 },
   { id: 'library', name: 'The Library', blurb: 'Reading & searching the code', activities: ['researching'], gx: 5, gy: 16, w: 3, d: 3, glow: 0xa78bfa },
-  { id: 'scriptorium', name: 'Scriptorium', blurb: 'Writing docs & markdown', activities: ['writing'], gx: 6, gy: 11, w: 2, d: 2, glow: 0xe879f9 },
+  { id: 'scriptorium', name: 'Scriptorium', blurb: 'Writing docs & markdown', activities: ['writing'], gx: 8, gy: 11, w: 2, d: 2, glow: 0xe879f9 },
   { id: 'observatory', name: 'Observatory', blurb: 'Browsing the web & docs', activities: ['browsing'], gx: 8, gy: 5, w: 2, d: 2, glow: 0x38bdf8 },
   { id: 'tower', name: 'Watchtower', blurb: 'Reviewing diffs & PRs', activities: ['reviewing'], gx: 16, gy: 3, w: 2, d: 2, glow: 0xfacc15 },
   { id: 'post', name: 'Rune Post', blurb: 'Commits, pushes & pull requests', activities: ['committing'], gx: 18, gy: 18, w: 2, d: 2, glow: 0xfb923c },
@@ -120,7 +120,7 @@ export function props(paths: Set<string>): Prop[] {
       const edge = Math.hypot(gx - 15.5, gy - 15.5) / 15;
       const roll = r();
       const jx = gx + 0.2 + r() * 0.6, jy = gy + 0.2 + r() * 0.6;
-      if (roll < 0.1 + edge * 0.38) out.push({ kind: r() < 0.6 ? 'pine' : 'oak', gx: jx, gy: jy, s: 0.8 + r() * 0.5 });
+      if (roll < 0.06 + edge * 0.32) out.push({ kind: r() < 0.6 ? 'pine' : 'oak', gx: jx, gy: jy, s: 0.8 + r() * 0.5 });
       else if (roll < 0.62) {
         const k = r();
         if (k < 0.08) out.push({ kind: 'rock', gx: jx, gy: jy, s: 0.6 + r() * 0.7 });

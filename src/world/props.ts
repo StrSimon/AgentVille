@@ -1,4 +1,5 @@
-import { Container, FillGradient, Graphics } from 'pixi.js';
+import { Container, FillGradient, Graphics, Sprite } from 'pixi.js';
+import type { SpriteSet } from './sprites';
 import { iso, rng, shade } from './iso';
 import type { Prop } from './layout';
 
@@ -78,11 +79,33 @@ function oak(s: number, r: () => number): { trunk: Graphics; canopy: Container }
 }
 
 /** Build a decoration. Origin = where it touches the ground. */
-export function drawProp(p: Prop, seed: number): PropView {
+const PAINTED: Partial<Record<Prop['kind'], { key: string; width: number }>> = {
+  pine: { key: 'tree-pine', width: 46 },
+  oak: { key: 'tree-oak', width: 54 },
+  bush: { key: 'bush', width: 30 },
+  rock: { key: 'rock', width: 26 },
+};
+
+export function drawProp(p: Prop, seed: number, sprites: SpriteSet = {}): PropView {
   const root = new Container();
   const s = p.s;
   const r = rng(seed);
   let canopy: Container | undefined;
+  const painted = PAINTED[p.kind];
+  if (painted && sprites[painted.key]) {
+    const sprite = new Sprite(sprites[painted.key]);
+    sprite.anchor.set(0.5, 0.97);
+    sprite.scale.set((painted.width * s * (0.9 + r() * 0.2)) / sprite.texture.width);
+    if (r() < 0.5) sprite.scale.x *= -1;
+    const holder = new Container();
+    holder.addChild(sprite);
+    root.addChild(holder);
+    if (p.kind === 'pine' || p.kind === 'oak') canopy = holder;
+    const pos = iso(p.gx, p.gy);
+    root.position.set(pos.x, pos.y);
+    root.zIndex = pos.y;
+    return { root, canopy, phase: r() * Math.PI * 2 };
+  }
   switch (p.kind) {
     case 'pine':
     case 'oak': {

@@ -41,7 +41,10 @@ const SHADE: Record<Orient, number> = { top: 0, left: 0.1, right: 0.36 };
 
 /** Fill a face polygon with a material, then darken it according to its orientation. */
 export function paintFace(g: Graphics, pts: number[], mat: Material, orient: Orient, extraShade = 0): void {
-  g.poly(pts).fill(pattern(mat.texture(), orient, mat.scale ?? 1));
+  const tex = mat.texture();
+  // large painted textures: keep the same world density and let one tile span ~4 grid tiles
+  const norm = tex.width > 128 ? (128 / tex.width) * 2 : 1;
+  g.poly(pts).fill(pattern(tex, orient, (mat.scale ?? 1) * norm));
   const shade = SHADE[orient] + extraShade;
   if (shade > 0) g.poly(pts).fill({ color: 0x0b0f1c, alpha: Math.min(0.8, shade) });
 }

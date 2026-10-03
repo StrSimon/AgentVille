@@ -1,4 +1,4 @@
-import { Application, Container, Graphics } from 'pixi.js';
+import { Application, Container, Graphics, Sprite } from 'pixi.js';
 import type { Agent, FxEvent } from '../types';
 import type { VillageState } from '../state/reducer';
 import { BuildingView } from './building-view';
@@ -13,6 +13,8 @@ import { Particles } from './particles';
 import { drawProp, lanternLight, propHeight, type PropView } from './props';
 import { ShadowLayer, type TreeCaster } from './shadows';
 import { Clouds, LightGrade } from './atmosphere';
+import { loadSprites, type SpriteSet } from './sprites';
+import { usePaintedGround } from './textures';
 import { LightLayer, nightFactor, skyGradient, Stars, type TimeMode } from './sky';
 
 export interface WorldCallbacks {
@@ -43,6 +45,7 @@ export class World {
   private clouds = new Clouds();
   private grade = new LightGrade();
   private tethers = new Graphics();
+  private sprites: SpriteSet = {};
   private lanterns: Array<{ x: number; y: number }> = [];
   private selected: string | null = null;
   private timeMode: TimeMode = 'auto';
@@ -67,14 +70,17 @@ export class World {
     });
     if (this.destroyed) { this.app.destroy(true); return; }
     this.el.appendChild(this.app.canvas);
+    const sprites: SpriteSet = await loadSprites();
+    this.sprites = sprites;
 
+    usePaintedGround(sprites['ground-grass'], sprites['ground-cobble']);
     const paths = pathTiles();
-    this.world.addChild(buildGround(paths));
+    this.world.addChild(buildGround(paths, sprites.mountains));
     this.water = buildWater();
     this.world.addChild(this.water, this.shadows.container, this.clouds.ground, this.entities, this.tethers, this.particles.container, this.clouds.sky);
 
     for (const def of BUILDINGS) {
-      const view = new BuildingView(def, () => this.onBuildingRebuilt());
+      const view = new BuildingView(def, () => this.onBuildingRebuilt(), sprites[def.id]);
       view.root.on('pointertap', (e) => {
         e.stopPropagation();
         if (!this.camera.dragged) this.cb.onSelectBuilding(def.id);
@@ -84,7 +90,7 @@ export class World {
       this.labels.addChild(view.label);
     }
     props(paths).forEach((p, i) => {
-      const view = drawProp(p, i + 1);
+      const view = drawProp(p, i + 1, sprites);
       this.entities.addChild(view.root);
       if (view.canopy) this.sway.push(view);
       if (p.kind === 'lantern') this.lanterns.push(lanternLight(p));
@@ -115,9 +121,31 @@ export class World {
 
   setTimeMode(mode: TimeMode): void { this.timeMode = mode; }
 
+  /** Swap the town hall's procedural benches for the painted bench sprite. */
+  private paintBenches(view: BuildingView): void {
+    const tex = this.sprites.bench;
+    if (!tex || view.def.id !== 'townhall') return;
+    const { gx, gy, d } = view.def;
+    view.extras.forEach((bench, row) => {
+      if (!(bench instanceof Graphics) || bench.label === 'painted') return;
+      bench.clear();
+      bench.label = 'painted';
+      const by = gy + d + 1.05 + row * 1.1;
+      for (const x of [gx + 0.2, gx + 2.3]) {
+        const s = new Sprite(tex);
+        s.anchor.set(0.5, 0.85);
+        s.scale.set(78 / tex.width);
+        const p = iso(x + 0.6, by + 0.2);
+        s.position.set(p.x, p.y);
+        bench.addChild(s);
+      }
+    });
+  }
+
   /** A building changed level: re-attach its sortable extras and refresh lights. */
   private onBuildingRebuilt(): void {
     for (const view of this.buildings.values()) {
+      this.paintBenches(view);
       for (const e of view.extras) if (!e.parent) this.entities.addChild(e);
     }
     this.rebuildLights();
@@ -157,7 +185,7 @@ export class World {
       let view = this.dwarves.get(agent.id);
       if (!view) {
         const start = agent.online ? this.spawnPoint(agent, state) : slotPos(BUILDING_BY_ID.tavern, this.dwarves.size);
-        view = new DwarfView(agent, start, (id) => this.cb.onSelectAgent(id));
+        view = new DwarfView(agent, start, (id) => this.cb.onSelectAgent(id), this.sprites);
         this.dwarves.set(agent.id, view);
         this.entities.addChild(view.parts.root);
         this.labels.addChild(view.overlay);

@@ -6,6 +6,15 @@ import { rng } from './iso';
 const SIZE = 128;
 const cache = new Map<string, Texture>();
 
+/** Painted ground textures (Codex image_gen) replace the procedural ones when available. */
+const painted: { grass?: Texture; cobble?: Texture } = {};
+
+export function usePaintedGround(grass?: Texture, cobble?: Texture): void {
+  for (const t of [grass, cobble]) if (t) t.source.addressMode = 'repeat';
+  painted.grass = grass;
+  painted.cobble = cobble;
+}
+
 type Ctx = CanvasRenderingContext2D;
 
 function hex(c: number, a = 1): string {
@@ -57,6 +66,7 @@ function noise(ctx: Ctx, r: () => number, color: number, count: number, size: nu
 }
 
 export function grassTexture(base: number): Texture {
+  if (painted.grass) return painted.grass;
   return make(`grass-${base}`, (ctx, r) => {
     ctx.fillStyle = hex(base);
     ctx.fillRect(0, 0, SIZE, SIZE);
@@ -84,6 +94,7 @@ export function grassTexture(base: number): Texture {
 }
 
 export function cobbleTexture(): Texture {
+  if (painted.cobble) return painted.cobble;
   return make('cobble', (ctx, r) => {
     ctx.fillStyle = '#5d564c';
     ctx.fillRect(0, 0, SIZE, SIZE);

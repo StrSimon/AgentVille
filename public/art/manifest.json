@@ -1,0 +1,118 @@
+{
+  "apothecary": {
+    "width": 720,
+    "height": 749
+  },
+  "arena": {
+    "width": 720,
+    "height": 677
+  },
+  "bench": {
+    "width": 720,
+    "height": 666
+  },
+  "bush": {
+    "width": 280,
+    "height": 275
+  },
+  "campfire": {
+    "width": 720,
+    "height": 510
+  },
+  "dwarf-claude-sit": {
+    "width": 720,
+    "height": 1059
+  },
+  "dwarf-claude-stand": {
+    "width": 720,
+    "height": 879
+  },
+  "dwarf-claude-walk": {
+    "width": 720,
+    "height": 1031
+  },
+  "dwarf-codex-sit": {
+    "width": 720,
+    "height": 667
+  },
+  "dwarf-codex-stand": {
+    "width": 720,
+    "height": 938
+  },
+  "dwarf-codex-walk": {
+    "width": 720,
+    "height": 819
+  },
+  "forge": {
+    "width": 720,
+    "height": 753
+  },
+  "gate": {
+    "width": 720,
+    "height": 704
+  },
+  "ground-cobble": {
+    "width": 512,
+    "height": 512
+  },
+  "ground-grass": {
+    "width": 512,
+    "height": 512
+  },
+  "guild": {
+    "width": 720,
+    "height": 737
+  },
+  "library": {
+    "width": 720,
+    "height": 749
+  },
+  "mine": {
+    "width": 720,
+    "height": 672
+  },
+  "mountains": {
+    "width": 900,
+    "height": 833
+  },
+  "observatory": {
+    "width": 720,
+    "height": 721
+  },
+  "post": {
+    "width": 720,
+    "height": 737
+  },
+  "rock": {
+    "width": 280,
+    "height": 247
+  },
+  "scriptorium": {
+    "width": 720,
+    "height": 1159
+  },
+  "tavern": {
+    "width": 720,
+    "height": 746
+  },
+  "tower": {
+    "width": 720,
+    "height": 1126
+  },
+  "townhall": {
+    "width": 720,
+    "height": 798
+  },
+  "tree-oak": {
+    "width": 280,
+    "height": 271
+  },
+  "tree-pine": {
+    "width": 280,
+    "height": 492
+  },
+  "well": {
+    "width": 720,
+    "height": 889
+  }
+}

@@ -1,6 +1,8 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 import type { Agent } from '../types';
 import { buildDwarf, TOOL_FOR, type DwarfParts, type Tool } from './dwarf-art';
+import { animatePainted, buildPaintedDwarf, paintedTextures, type PaintedParts } from './dwarf-painted';
+import type { SpriteSet } from './sprites';
 import { hash, type Pt } from './iso';
 import { SOURCE_COLOR } from './layout';
 import { bored, clock, needs, speak, story } from './phrases';
@@ -15,7 +17,8 @@ function label(size: number, weight = '600', fill = 0xece6d6): Text {
 }
 
 export class DwarfView {
-  parts: DwarfParts;
+  parts: DwarfParts | PaintedParts;
+  private facing = -1;
   readonly overlay = new Container({ label: 'dwarf-overlay' });
   pos: Pt;
   private route: Pt[] = [];
@@ -38,13 +41,13 @@ export class DwarfView {
   /** number of online sub-agents following this dwarf */
   crew = 0;
 
-  constructor(public agent: Agent, start: Pt, onSelect: (id: string) => void) {
+  constructor(public agent: Agent, start: Pt, onSelect: (id: string) => void, private sprites: SpriteSet = {}) {
     this.seed = hash(agent.id);
     this.speed = agent.kind === 'sub' ? 92 : 74;
     this.pos = { ...start };
     this.builtLevel = agent.level;
     this.builtSource = agent.source;
-    this.parts = buildDwarf(agent.id, agent.source, agent.level, agent.kind === 'sub');
+    this.parts = this.build(agent);
     this.wire(onSelect);
     this.tag.anchor.set(0.5, 0);
     this.bubbleText.anchor.set(0.5);
@@ -62,6 +65,14 @@ export class DwarfView {
     this.overlay.eventMode = 'none';
     this.bubble.visible = false;
     this.marker.visible = false;
+  }
+
+  /** Painted sprite when the clan's art exists, otherwise the procedural dwarf. */
+  private build(agent: Agent): DwarfParts | PaintedParts {
+    const textures = paintedTextures(this.sprites, agent.source);
+    return textures
+      ? buildPaintedDwarf(textures, agent.source, agent.kind === 'sub')
+      : buildDwarf(agent.id, agent.source, agent.level, agent.kind === 'sub');
   }
 
   private wire(onSelect: (id: string) => void): void {
@@ -82,7 +93,7 @@ export class DwarfView {
       const parent = this.parts.root.parent;
       const z = this.parts.root.zIndex;
       this.parts.root.destroy({ children: true });
-      this.parts = buildDwarf(agent.id, agent.source, agent.level, agent.kind === 'sub');
+      this.parts = this.build(agent);
       this.wire(onSelect);
       this.parts.root.zIndex = z;
       parent?.addChild(this.parts.root);
@@ -152,7 +163,8 @@ export class DwarfView {
       if (dist <= step) { this.pos = { ...next }; this.route.shift(); } else {
         this.pos.x += (dx / dist) * step;
         this.pos.y += (dy / dist) * step;
-        p.body.scale.x = dx < 0 ? -1 : 1;
+        this.facing = dx < 0 ? -1 : 1;
+        if (!('sprite' in p)) p.body.scale.x = this.facing;
       }
       moving = true;
     }
@@ -184,7 +196,13 @@ export class DwarfView {
   }
 
   private animate(t: number, now: number): void {
-    const p = this.parts;
+    const painted = this.parts;
+    if ('sprite' in painted) {
+      animatePainted(painted, this.pose, this.agent.activity, t, this.seed, this.facing);
+      this.chatter(now);
+      return;
+    }
+    const p = painted;
     const s = this.seed % 100;
     const tool: Tool = this.pose === 'work' ? TOOL_FOR[this.agent.activity] : 'none';
     for (const [name, g] of Object.entries(p.tools)) g.visible = name === tool;
@@ -247,6 +265,10 @@ export class DwarfView {
         break;
       }
     }
+    this.chatter(now);
+  }
+
+  private chatter(now: number): void {
     if (this.pose === 'bored' && now > this.nextChatter) {
       this.nextChatter = now + 9000 + (this.seed % 5000);
       this.say(bored(Math.floor(now / 9000) + this.seed), 3800);

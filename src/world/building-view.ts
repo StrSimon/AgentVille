@@ -1,10 +1,11 @@
-import { Container, Graphics, Text } from 'pixi.js';
-import { iso } from './iso';
+import { Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
+import { iso, TW } from './iso';
 import type { BuildingDef, BuildingId } from './layout';
 import type { ArtCtx, ArtResult } from './art-types';
 import { arena, campfire, forge, guild, library, tavern, townhall, well } from './art-a';
 import { apothecary, gate, mine, observatory, post, scriptorium, tower } from './art-b';
 import type { Particles } from './particles';
+import { SPRITE_FIT } from './sprites';
 
 const ART: Record<BuildingId, (ctx: ArtCtx) => ArtResult> = {
   townhall, campfire, guild, forge, arena, tavern, well, library,
@@ -27,7 +28,7 @@ export class BuildingView {
   private acc: number[] = [];
   private hovered = false;
 
-  constructor(readonly def: BuildingDef, private onLayerChange: () => void) {
+  constructor(readonly def: BuildingDef, private onLayerChange: () => void, private texture?: Texture) {
     this.root.eventMode = 'static';
     this.root.cursor = 'pointer';
     this.root.on('pointerover', () => { this.hovered = true; });
@@ -47,8 +48,14 @@ export class BuildingView {
     this.extras.length = 0;
     const g = new Graphics();
     this.lit = new Graphics();
-    this.root.addChild(this.pulse, g, this.lit);
-    this.art = ART[this.def.id]({ g, lit: this.lit, b: this.def, level, add: (c) => this.root.addChild(c) });
+    if (this.texture) {
+      // Painted sprite: keep the procedural art only for its lights, emitters and extras.
+      this.art = ART[this.def.id]({ g: new Graphics(), lit: new Graphics(), b: this.def, level, add: () => {} });
+      this.root.addChild(this.pulse, this.paintedSprite(level));
+    } else {
+      this.root.addChild(this.pulse, g, this.lit);
+      this.art = ART[this.def.id]({ g, lit: this.lit, b: this.def, level, add: (c) => this.root.addChild(c) });
+    }
     this.extras.push(...(this.art.extras || []));
     this.acc = this.art.emitters.map(() => Math.random());
     // Sort by footprint center: dwarves at the door (in front) draw over the building.
@@ -57,6 +64,22 @@ export class BuildingView {
     this.plate.position.set(center.x, this.art.top);
     this.setPlate();
     this.onLayerChange();
+  }
+
+  private paintedSprite(level: number): Sprite {
+    const d = this.def;
+    const sprite = new Sprite(this.texture!);
+    const fit = SPRITE_FIT[d.id] || { width: 1.25 };
+    const footprint = (d.w + d.d) * (TW / 2);
+    // buildings grow a little as they level up
+    const scale = (footprint * fit.width * (1 + Math.min(level - 1, 9) * 0.015)) / sprite.texture.width;
+    sprite.scale.set(scale);
+    sprite.anchor.set(0.5, 1);
+    const center = iso(d.gx + d.w / 2, d.gy + d.d / 2);
+    const front = iso(d.gx + d.w, d.gy + d.d);
+    sprite.position.set(center.x, front.y + 6 + (fit.lift ?? 0));
+    this.art = { ...this.art, top: Math.min(this.art.top, sprite.y - sprite.height + 10) };
+    return sprite;
   }
 
   /** The floating name plate lives in the label layer (above dwarves). */
