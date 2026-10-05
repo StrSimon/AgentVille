@@ -30,7 +30,13 @@ It starts the village at <http://localhost:4242>, asks once to connect Claude Co
 That's it — start a new Claude Code or Codex session anywhere and your dwarf arrives within seconds.
 
 > **Codex:** after connecting, Codex asks once to trust the new hooks on its next start — choose *Trust all and continue*.
-> **macOS:** the app isn't notarized by Apple. The first time, macOS blocks it — open *System Settings → Privacy & Security* and click **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/AgentVille.app`).
+> **macOS (easiest):** install with one line in Terminal — no Gatekeeper warning, because the app isn't downloaded through a browser:
+>
+> ```bash
+> curl -fsSL https://github.com/StrSimon/AgentVille/releases/latest/download/install-mac.sh | bash
+> ```
+>
+> Using the `.dmg` instead? The app isn't notarized by Apple, so macOS blocks it the first time — click **Done**, then open *System Settings → Privacy & Security* and click **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/AgentVille.app`).
 > **Windows:** SmartScreen may warn — click *More info → Run anyway*.
 
 ## The village
